@@ -1,0 +1,13 @@
+diff -rupN quiche-0.3.0/src/ffi.rs quiche-0.3.0-b/src/ffi.rs
+--- quiche-0.3.0/src/ffi.rs	2020-04-12 22:40:52.000000000 +0200
++++ quiche-0.3.0-b/src/ffi.rs	2020-04-12 22:43:59.000000000 +0200
+@@ -68,9 +68,6 @@ pub extern fn quiche_enable_debug_loggin
+     let argp = atomic::AtomicPtr::new(argp);
+     let logger = Box::new(Logger { cb, argp });
+ 
+-    if log::set_boxed_logger(logger).is_err() {
+-        return -1;
+-    }
+ 
+     log::set_max_level(log::LevelFilter::Trace);
+ 

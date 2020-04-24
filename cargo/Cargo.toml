@@ -1,0 +1,104 @@
+[package]
+name = "cargo"
+version = "0.1.0"
+authors = ["gfleury <gfleury@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+log = { version = "0.4.8", features = ["std", "serde"] }
+cc = { version = "1.0.37", default-features = false }
+ring = "0.16.12"
+libc = "0.2"
+criterion = { version = "0.3", optional = true }
+lazy_static = "1"
+quiche = { git = "https://github.com/cloudflare/quiche.git", branch = "master" }
+
+
+# filegroup(
+#     name = "headers",
+#     srcs = glob(["include/*.h"]),
+# )
+
+# Mandatory (or Cargo tooling is unhappy)
+[lib]
+proc-macro = true
+path = "fake_lib.rs"
+
+[raze]
+# The WORKSPACE relative path to the Cargo.toml working directory.
+workspace_path = "//cargo"
+genmode = "Remote"
+
+# The target to generate BUILD rules for.
+target = "x86_64-apple-darwin"
+
+[raze.crates.quiche.'0.3.0']
+gen_buildrs = true
+buildrs_additional_environment_variables=[
+    "CARGO_FEATURE_STD=1",
+    "RUST_BACKTRACE=full",
+    "CARGO_PKG_NAME=ring",
+    "CARGO_FEATURE_ALLOC=1",
+    "CARGO_CFG_TARGET_ARCH=x86_64",
+    "CARGO_CFG_TARGET_OS=macos",
+    "CARGO_CFG_TARGET_ENV=gnu",
+    "CARGO_MANIFEST_DIR=''",
+    "OPT_LEVEL=1",
+    "HOST=x86_64-macos-gnu",
+    "DEBUG=true",
+    "PROFILE=debug",
+    "GOCACHE=/Users/georgefleury/Library/Caches/go-build",
+    "GOPATH=/Users/georgefleury/Desktop/prj/go",
+    "GOROOT=/usr/local/Cellar/go/1.14/libexec",
+]
+additional_flags = [
+    "--cfg=use_proc_macro",
+]
+
+[raze.crates.log.'0.4.8']
+gen_buildrs = true
+additional_flags = [
+    "--cfg=use_proc_macro",
+]
+
+[raze.crates.wasm_bindgen_backend.'0.2.60']
+gen_buildrs = true
+additional_flags = [
+    "--cfg=use_proc_macro",
+]
+
+[raze.crates.syn.'1.0.17']
+gen_buildrs = true
+additional_flags = [
+    "--cfg=use_proc_macro",
+]
+
+[raze.crates.proc-macro2.'1.0.10']
+gen_buildrs = true
+additional_flags = [
+    "--cfg=use_proc_macro",
+]
+
+[raze.crates.ring.'0.16.12']
+gen_buildrs = true
+data_attr = "glob([\"**/*.*\"])"
+additional_deps = [
+    "@raze__lazy_static__1_4_0//:lazy_static",
+    "@raze__libc__0_2_68//:libc",
+    "@raze__cc__1_0_50//:cc",
+]
+additional_flags = [
+    "--cfg=use_proc_macro",
+]
+buildrs_additional_environment_variables=[
+    "RUST_BACKTRACE=1",
+    "CARGO_PKG_NAME=ring",
+    "CARGO_FEATURE_ALLOC=1",
+    "CARGO_CFG_TARGET_ARCH=x86_64",
+    "CARGO_CFG_TARGET_OS=macos",
+    "CARGO_CFG_TARGET_ENV=gnu",
+    "CARGO_MANIFEST_DIR=''",
+    "OPT_LEVEL=1",
+    "HOST=x86_64-macos-gnu",
+    "DEBUG=1",
+]
