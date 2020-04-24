@@ -18,7 +18,7 @@ void delete_http2_session_data(http2_session_data *session_data)
 {
     struct http_stream *stream_data;
     SSL *ssl = bufferevent_openssl_get_ssl(session_data->bev);
-    fprintf(stderr, "%s disconnected\n", session_data->client_addr);
+    log_debug("%s disconnected\n", session_data->client_addr);
     if (ssl)
     {
         SSL_shutdown(ssl);

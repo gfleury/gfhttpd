@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "http3.h"
+#include "log/log.h"
 
 extern void flush_egress(struct http_stream *conn_io);
 
@@ -18,7 +19,7 @@ void timeout_cb(const int sock, short int which, void *arg)
 
     quiche_conn_on_timeout(http3_params->conn);
 
-    fprintf(stderr, "timeout\n");
+    log_debug("timeout");
 
     flush_egress(conn_io);
 
@@ -27,8 +28,8 @@ void timeout_cb(const int sock, short int which, void *arg)
         quiche_stats stats;
 
         quiche_conn_stats(http3_params->conn, &stats);
-        fprintf(stderr, "connection closed, recv=%zu sent=%zu lost=%zu rtt=%" PRIu64 "ns cwnd=%zu\n",
-                stats.recv, stats.sent, stats.lost, stats.rtt, stats.cwnd);
+        log_debug("connection closed, recv=%zu sent=%zu lost=%zu rtt=%" PRIu64 "ns cwnd=%zu",
+                  stats.recv, stats.sent, stats.lost, stats.rtt, stats.cwnd);
 
         HASH_DELETE(hh, conns->h, conn_io);
 

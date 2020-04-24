@@ -14,6 +14,7 @@
 #include <sys/types.h>
 
 #include "http3.h"
+#include "log/log.h"
 
 #define MAX_TOKEN_LEN                     \
     sizeof("quiche") - 1 +                \
@@ -28,7 +29,7 @@ void write_cb(struct http_stream *conn_io);
 
 void debug_log(const char *line, void *argp)
 {
-    fprintf(stderr, "DEBUG: %s\n", line);
+    log_debug("%s", line);
 }
 
 int http3_init_sock(struct addrinfo *local)
@@ -62,7 +63,7 @@ int http3_init_config()
     pquiche_config = quiche_config_new(QUICHE_PROTOCOL_VERSION);
     if (pquiche_config == NULL)
     {
-        fprintf(stderr, "failed to create config\n");
+        log_error("failed to create config");
         return -1;
     }
 
@@ -87,7 +88,7 @@ int http3_init_config()
     http3_config = quiche_h3_config_new();
     if (http3_config == NULL)
     {
-        fprintf(stderr, "failed to create HTTP/3 config\n");
+        log_error("failed to create HTTP/3 config");
         return -1;
     }
     quiche_h3_config_set_max_header_list_size(http3_config, 16384);
@@ -133,17 +134,17 @@ void future_write_cb(const int sock, short int which, void *arg)
                                        fw->stream_id, (uint8_t *)buf, n - written, fw->eof);
         if (written == QUICHE_H3_ERR_DONE)
         {
-            printf("QUICHE FUCKUP!\n");
+            log_error("QUICHE FUCKUP!");
             exit(0);
         }
 
         fw->pos += written;
         left = left - n;
-        fprintf(stdout, "%s %s Written %d read %d, left %d - EOF=%s.\n", conn_io->request.method, conn_io->request.path, written, n, left, fw->eof ? "true" : "false");
+        log_debug("%s %s Written %d read %d, left %d - EOF=%s.", conn_io->request.method, conn_io->request.path, written, n, left, fw->eof ? "true" : "false");
 
         if (written != n)
         {
-            printf("*** We need to push more but we failed.\n");
+            log_debug("*** We need to push more but we failed.");
 
             struct timeval half_sec = {0, 2000};
             event_add(fw->fw_event, &half_sec);
@@ -193,7 +194,7 @@ int send_response(struct http_stream *conn_io, int64_t stream_id, quiche_h3_head
     headers[2].value = (const uint8_t *)buf;
     headers[2].value_len = sprintf(buf, "%d", len);
 
-    printf("Legth is %.*s\n", (int)headers[2].value_len, headers[2].value);
+    log_debug("Legth is %.*s", (int)headers[2].value_len, headers[2].value);
 
     quiche_h3_send_response(http3_params->http3, http3_params->conn,
                             stream_id, headers, 3, false);
@@ -211,7 +212,7 @@ int send_response(struct http_stream *conn_io, int64_t stream_id, quiche_h3_head
     event_add(fw->fw_event, &half_sec);
     event_active(fw->fw_event, 0, 0);
 
-    fprintf(stdout, "content scheduled to be shipped.\n");
+    log_debug("content scheduled to be shipped.");
     return len;
 }
 
@@ -226,13 +227,13 @@ void flush_egress(struct http_stream *conn_io)
 
         if (written == QUICHE_ERR_DONE)
         {
-            fprintf(stderr, "done writing\n");
+            log_debug("done writing");
             break;
         }
 
         if (written < 0)
         {
-            fprintf(stderr, "failed to create packet: %zd\n", written);
+            log_error("failed to create packet: %zd", written);
             return;
         }
 
@@ -241,11 +242,11 @@ void flush_egress(struct http_stream *conn_io)
                               conn_io->peer_addr_len);
         if (sent != written)
         {
-            perror("failed to send");
+            log_error("failed to send: %d", errno);
             return;
         }
 
-        // fprintf(stderr, "sent %zd bytes\n", sent);
+        log_debug("sent %zd bytes", sent);
     }
 
     int64_t q_tout = quiche_conn_timeout_as_nanos(http3_params->conn);

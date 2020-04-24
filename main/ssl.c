@@ -1,7 +1,7 @@
 #include <err.h>
 #include <string.h>
 
-#include "log.h"
+#include "log/log.h"
 #include "ssl.h"
 
 static unsigned char next_proto_list[256];

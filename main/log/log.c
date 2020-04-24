@@ -17,12 +17,12 @@ static const char *level_names[] = {
     "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"};
 
 #define LOG_SIZE 1024
-void default_log_func(char *buf, size_t n)
+static void default_log_func(char *buf, size_t n)
 {
     fprintf(stdout, "%.*s", (int)n, buf);
 }
 
-void write_log_cb(const int fd, short int which, void *arg)
+static void write_log_cb(const int fd, short int which, void *arg)
 {
     struct log *plog = arg;
     char buf[LOG_SIZE];
@@ -33,15 +33,12 @@ void write_log_cb(const int fd, short int which, void *arg)
     }
 
     int n = read(fd, buf, LOG_SIZE);
-
-    if (n < 0)
+    while (n > 0)
     {
-        // failed to read
-        return;
+        // Call final
+        lplog->log_func(buf, n);
+        n = read(fd, buf, LOG_SIZE);
     }
-
-    // Call final
-    lplog->log_func(buf, n);
 }
 
 int init_log(struct event_base *loop, struct log *plog)
@@ -74,6 +71,12 @@ int init_log(struct event_base *loop, struct log *plog)
     if ((ret = fcntl(plog->fds_pipe[0], F_SETFL, O_NONBLOCK)) != 0)
     {
         perror("failed to make log read socket non-blocking");
+        return ret;
+    }
+
+    if ((ret = fcntl(plog->fds_pipe[1], F_SETFL, O_NONBLOCK)) != 0)
+    {
+        perror("failed to make log write socket non-blocking");
         return ret;
     }
 

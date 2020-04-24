@@ -71,14 +71,14 @@ static struct http_stream *create_conn(struct app_context *app_ctx, uint8_t *odc
 
     if (conn_io == NULL)
     {
-        fprintf(stderr, "failed to allocate connection IO\n");
+        log_error("failed to allocate connection IO");
         return NULL;
     }
 
     int rng = open("/dev/urandom", O_RDONLY);
     if (rng < 0)
     {
-        perror("failed to open /dev/urandom");
+        log_error("failed to open /dev/urandom: %d", errno);
         return NULL;
     }
 
@@ -86,7 +86,7 @@ static struct http_stream *create_conn(struct app_context *app_ctx, uint8_t *odc
     close(rng);
     if (rand_len < 0)
     {
-        perror("failed to create connection ID");
+        log_error("failed to create connection ID: %d", errno);
         return NULL;
     }
 
@@ -94,7 +94,7 @@ static struct http_stream *create_conn(struct app_context *app_ctx, uint8_t *odc
                                       odcid, odcid_len, pquiche_config);
     if (conn == NULL)
     {
-        fprintf(stderr, "failed to create connection\n");
+        log_error("failed to create connection: %d", errno);
         return NULL;
     }
 
@@ -110,7 +110,7 @@ static struct http_stream *create_conn(struct app_context *app_ctx, uint8_t *odc
 
     HASH_ADD(hh, conns->h, cid, LOCAL_CONN_ID_LEN, conn_io);
 
-    fprintf(stderr, "new connection\n");
+    log_debug("new connection");
 
     return conn_io;
 }
@@ -120,7 +120,7 @@ static int for_each_header(uint8_t *name, size_t name_len, uint8_t *value, size_
     struct http_stream *conn_io = argp;
     assert(conn_io != NULL);
 
-    fprintf(stderr, "got HTTP header: %.*s=%.*s\n", (int)name_len, name, (int)value_len, value);
+    log_debug("got HTTP header: %.*s=%.*s", (int)name_len, name, (int)value_len, value);
 
     // Check for pseudo-headers
     if (*name == ':')
@@ -188,11 +188,11 @@ void http3_event_cb(const int sock, short int which, void *arg)
         {
             if ((errno == EWOULDBLOCK) || (errno == EAGAIN))
             {
-                fprintf(stderr, "recv would block\n");
+                log_debug("recv would block");
                 break;
             }
 
-            perror("failed to read");
+            log_error("failed to read");
             return;
         }
 
@@ -216,7 +216,7 @@ void http3_event_cb(const int sock, short int which, void *arg)
                                     token, &token_len);
         if (rc < 0)
         {
-            fprintf(stderr, "failed to parse header: %d\n", rc);
+            log_error("failed to parse header: %d", rc);
             return;
         }
 
@@ -226,7 +226,7 @@ void http3_event_cb(const int sock, short int which, void *arg)
         {
             if (!quiche_version_is_supported(version))
             {
-                fprintf(stderr, "version negotiation\n");
+                log_debug("version negotiation");
 
                 ssize_t written = quiche_negotiate_version(scid, scid_len,
                                                            dcid, dcid_len,
@@ -234,8 +234,8 @@ void http3_event_cb(const int sock, short int which, void *arg)
 
                 if (written < 0)
                 {
-                    fprintf(stderr, "failed to create vneg packet: %zd\n",
-                            written);
+                    log_error("failed to create vneg packet: %zd",
+                              written);
                     return;
                 }
 
@@ -244,17 +244,17 @@ void http3_event_cb(const int sock, short int which, void *arg)
                                       peer_addr_len);
                 if (sent != written)
                 {
-                    perror("failed to send");
+                    log_error("failed to send: %d", errno);
                     return;
                 }
 
-                // fprintf(stderr, "sent %zd bytes\n", sent);
+                log_debug("sent %zd bytes", sent);
                 return;
             }
 
             if (token_len == 0)
             {
-                fprintf(stderr, "stateless retry\n");
+                log_debug("stateless retry");
 
                 mint_token(dcid, dcid_len, &peer_addr, peer_addr_len,
                            token, &token_len);
@@ -267,8 +267,8 @@ void http3_event_cb(const int sock, short int which, void *arg)
 
                 if (written < 0)
                 {
-                    fprintf(stderr, "failed to create retry packet: %zd\n",
-                            written);
+                    log_error("failed to create retry packet: %zd",
+                              written);
                     return;
                 }
 
@@ -277,18 +277,18 @@ void http3_event_cb(const int sock, short int which, void *arg)
                                       peer_addr_len);
                 if (sent != written)
                 {
-                    perror("failed to send");
+                    log_error("failed to send: %d", errno);
                     return;
                 }
 
-                // fprintf(stderr, "sent %zd bytes\n", sent);
+                log_debug("sent %zd bytes", sent);
                 return;
             }
 
             if (!validate_token(token, token_len, &peer_addr, peer_addr_len,
                                 odcid, &odcid_len))
             {
-                fprintf(stderr, "invalid address validation token\n");
+                log_error("invalid address validation token");
                 return;
             }
 
@@ -308,17 +308,17 @@ void http3_event_cb(const int sock, short int which, void *arg)
 
         if (done == QUICHE_ERR_DONE)
         {
-            fprintf(stderr, "done reading\n");
+            log_debug("done reading");
             break;
         }
 
         if (done < 0)
         {
-            fprintf(stderr, "failed to process packet: %zd\n", done);
+            log_error("failed to process packet: %zd", done);
             return;
         }
 
-        //fprintf(stderr, "recv %zd bytes\n", done);
+        log_debug("recv %zd bytes", done);
 
         if (quiche_conn_is_established(http3_params->conn))
         {
@@ -330,7 +330,7 @@ void http3_event_cb(const int sock, short int which, void *arg)
 
                 if (http3_params->http3 == NULL)
                 {
-                    fprintf(stderr, "failed to create HTTP/3 connection\n");
+                    log_error("failed to create HTTP/3 connection");
                     return;
                 }
             }
@@ -352,7 +352,7 @@ void http3_event_cb(const int sock, short int which, void *arg)
 
                     if (rc != 0)
                     {
-                        fprintf(stderr, "failed to process headers\n");
+                        log_error("failed to process headers");
                         // TODO Ship error.
                     }
 
@@ -383,7 +383,7 @@ void http3_event_cb(const int sock, short int which, void *arg)
                     int fd = root_router(conn_io->request.path);
                     if (fd == -1)
                     {
-                        fprintf(stderr, "%s %s We are fucked, unable to root_router.\n", conn_io->request.method, conn_io->request.path);
+                        log_error("%s %s We are fucked, unable to root_router.", conn_io->request.method, conn_io->request.path);
                         // TODO Ship error.
                         // if (error_reply(session, stream_data) != 0)
                         // {
@@ -398,7 +398,7 @@ void http3_event_cb(const int sock, short int which, void *arg)
 
                 case QUICHE_H3_EVENT_DATA:
                 {
-                    fprintf(stderr, "got HTTP data\n");
+                    log_debug("got HTTP data");
                     break;
                 }
 
@@ -422,8 +422,8 @@ void http3_event_cb(const int sock, short int which, void *arg)
             quiche_stats stats;
 
             quiche_conn_stats(http3_params->conn, &stats);
-            fprintf(stderr, "connection closed, recv=%zu sent=%zu lost=%zu rtt=%" PRIu64 "ns cwnd=%zu\n",
-                    stats.recv, stats.sent, stats.lost, stats.rtt, stats.cwnd);
+            log_info("connection closed, recv=%zu sent=%zu lost=%zu rtt=%" PRIu64 "ns cwnd=%zu",
+                     stats.recv, stats.sent, stats.lost, stats.rtt, stats.cwnd);
 
             HASH_DELETE(hh, conns->h, conn_io);
 
@@ -431,7 +431,7 @@ void http3_event_cb(const int sock, short int which, void *arg)
 
             quiche_conn_free(http3_params->conn);
 
-            fprintf(stdout, "Freeing the hell out of it.\n");
+            log_debug("Freeing the hell out of it.");
             free(conn_io->request.authority);
             free(conn_io->request.method);
             free(conn_io->request.path);
