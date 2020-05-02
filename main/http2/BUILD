@@ -34,9 +34,8 @@ cc_library(
         "//lib:libevent",
         "//lib:nghttp2",
         # Local libs
-        "//lib/go/libevent:libevent_lib",
-        "//lib/go/libevent:libevent_wrap",
-        "//lib/go/dir_index:dir_index_lib",
+        "//lib/golang/libevent:libevent_lib",
+        "//lib/golang/libevent:libevent_wrap",
         # "//lib:dir_index",
     ],
 )

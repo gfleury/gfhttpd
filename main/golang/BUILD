@@ -1,24 +1,23 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
 cc_library(
-    name = "router",
+    name = "golang",
     srcs = [
-        "router.c",
+        "golang.c",
     ],
     hdrs = glob(["*.h"]),
     copts = [
         "-Werror",
         "-Imain/",
         "-Iexternal/uthash/src/",
-        "-g",
+        "-Ibazel-out/darwin-dbg/bin/lib/golang/golang_bridge/",
     ],
     linkstatic = True,
     visibility = [
-        "//main/http2:__pkg__",
-        "//main/http3:__pkg__",
+        "//main/router:__pkg__",
     ],
     deps = [
-        "//main/golang",
+        "//lib/golang/golang_bridge:lib_headers",
         "//main/http_stream",
         "//main/log",
         "@boringssl//:ssl",

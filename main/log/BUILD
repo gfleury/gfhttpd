@@ -16,8 +16,10 @@ cc_library(
     linkstatic = True,
     visibility = [
         "//main:__pkg__",
+        "//main/golang:__pkg__",
         "//main/http2:__pkg__",
         "//main/http3:__pkg__",
+        "//main/router:__pkg__",
     ],
     deps = [
         "//lib:libevent",

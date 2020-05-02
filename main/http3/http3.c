@@ -106,6 +106,41 @@ struct future_write
     bool eof;
 };
 
+quiche_h3_header *get_http3_headers(headers *phdrs, unsigned int *length, char *http_status, size_t len, char *buf)
+{
+    *length = length_header(phdrs);
+    headers *current, *tmp;
+    int idx = 0;
+    quiche_h3_header *h3_hdrs = calloc(*length, sizeof(quiche_h3_header));
+
+    HASH_ITER(hh, phdrs, current, tmp)
+    {
+        if (strncasecmp(current->name, ":status", current->n_name) == 0)
+        {
+            current->value = http_status;
+            current->n_value = strlen(http_status);
+
+            log_debug("HTTP :status is %.*s", (int)current->n_value, current->value);
+        }
+        else if (strncasecmp(current->name, "content-length", current->n_name) == 0)
+        {
+            current->value = buf;
+            current->n_value = sprintf(buf, "%zu", len);
+
+            log_debug("Content-Legth is %.*s", (int)current->n_value, current->value);
+        }
+
+        h3_hdrs[idx].name = (const uint8_t *)current->name;
+        h3_hdrs[idx].name_len = current->n_name;
+        h3_hdrs[idx].value = (const uint8_t *)current->value;
+        h3_hdrs[idx].value_len = current->n_value;
+
+        idx++;
+    }
+
+    return h3_hdrs;
+}
+
 void future_write_cb(const int sock, short int which, void *arg)
 {
     struct future_write *fw = arg;
@@ -113,8 +148,27 @@ void future_write_cb(const int sock, short int which, void *arg)
     struct http3_params *http3_params = conn_io->http3_params;
     // struct app_context *app_ctx = conn_io->app_ctx;
     // struct connections *conns = app_ctx->conns;
-
     char buf[14515];
+
+    if (conn_io->response.headers_sent == false && conn_io->response.content_lenght != -1)
+    {
+        unsigned int n_headers;
+        quiche_h3_header *headers = get_http3_headers(conn_io->response.headers,
+                                                      &n_headers, conn_io->response.http_status, conn_io->response.content_lenght, buf);
+
+        quiche_h3_send_response(http3_params->http3, http3_params->conn,
+                                fw->stream_id, headers, n_headers, false);
+
+        conn_io->response.headers_sent = true;
+        fw->len = conn_io->response.content_lenght;
+    }
+    else if (conn_io->response.headers_sent == false && conn_io->response.content_lenght == -1)
+    {
+        struct timeval half_sec = {0, 2000};
+        event_add(fw->fw_event, &half_sec);
+        return;
+    }
+
     int fd = fw->fd;
     int left = fw->len - fw->pos;
 
@@ -140,7 +194,7 @@ void future_write_cb(const int sock, short int which, void *arg)
 
         fw->pos += written;
         left = left - n;
-        log_debug("%s %s Written %d read %d, left %d - EOF=%s.", conn_io->request.method, conn_io->request.path, written, n, left, fw->eof ? "true" : "false");
+        log_debug("%s %s Written %d read %d, left %d - EOF=%s.", conn_io->request.method, conn_io->request.url, written, n, left, fw->eof ? "true" : "false");
 
         if (written != n)
         {
@@ -182,29 +236,16 @@ static void set_timeout(struct http_stream *conn_io, int64_t q_tout)
     }
 }
 
-int send_response(struct http_stream *conn_io, int64_t stream_id, quiche_h3_header *headers, int fd)
+int send_response(struct http_stream *conn_io, int64_t stream_id, int fd)
 {
-
-    struct http3_params *http3_params = conn_io->http3_params;
-    char buf[14515];
-
-    int len = lseek(fd, 0, SEEK_END), pos = 0;
-    lseek(fd, 0, SEEK_SET);
-
-    headers[2].value = (const uint8_t *)buf;
-    headers[2].value_len = sprintf(buf, "%d", len);
-
-    log_debug("Legth is %.*s", (int)headers[2].value_len, headers[2].value);
-
-    quiche_h3_send_response(http3_params->http3, http3_params->conn,
-                            stream_id, headers, 3, false);
+    //struct http3_params *http3_params = conn_io->http3_params;
 
     struct future_write *fw = calloc(1, sizeof(struct future_write));
     fw->fd = fd;
     fw->conn_io = conn_io;
-    fw->pos = pos;
+    fw->pos = 0;
     fw->stream_id = stream_id;
-    fw->len = len;
+    fw->len = -1;
     fw->eof = false;
 
     fw->fw_event = evtimer_new(conn_io->app_ctx->evbase, future_write_cb, fw);
@@ -213,7 +254,7 @@ int send_response(struct http_stream *conn_io, int64_t stream_id, quiche_h3_head
     event_active(fw->fw_event, 0, 0);
 
     log_debug("content scheduled to be shipped.");
-    return len;
+    return 0;
 }
 
 void flush_egress(struct http_stream *conn_io)

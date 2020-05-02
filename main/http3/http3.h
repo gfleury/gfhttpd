@@ -24,7 +24,7 @@ struct http3_params
 extern void debug_log(const char *line, void *argp);
 extern quiche_config *pquiche_config;
 extern quiche_h3_config *http3_config;
-int send_response(struct http_stream *conn_io, int64_t stream_id, quiche_h3_header *headers, int fd);
+int send_response(struct http_stream *conn_io, int64_t stream_id, int fd);
 void flush_egress(struct http_stream *conn_io);
 #endif
 

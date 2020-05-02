@@ -5,6 +5,8 @@
 
 #include <openssl/ssl.h>
 
+#include "headers.h"
+
 #include <uthash.h>
 
 #define LOCAL_CONN_ID_LEN 16
@@ -18,12 +20,23 @@ typedef struct app_context
 
 typedef struct http_request
 {
-    char *path;
+    char *url;
     char *method;
     char *authority;
     char *scheme;
-
+    headers *headers;
+    int fd;
+    size_t content_lenght;
 } http_request;
+
+typedef struct http_response
+{
+    char *http_status;
+    headers *headers;
+    int headers_sent;
+    int fd;
+    size_t content_lenght;
+} http_response;
 
 struct http_stream
 {
@@ -43,6 +56,7 @@ struct http_stream
     struct http_stream *prev;
 
     http_request request;
+    http_response response;
 
     struct sockaddr_storage peer_addr;
     socklen_t peer_addr_len;

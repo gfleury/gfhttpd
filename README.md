@@ -1,9 +1,9 @@
 # gfhttpd
 
-http server supporting HTTP protocol verions 2 and 3, core loop using libevent and extensible in Golang and Rust.
-
-Main goal of this project is to learn about the Bazel building system with different toolchains/languages.
+Main goal of the project is to learn about the Bazel building system with different toolchains/languages.
 Creating a complex multi-language project with inter-linking between C/Golang and Rust.
+So, an http server supporting HTTP protocol verions 2 and 3, core loop using libevent and extensible in Golang and Rust.
+
 
 ## HTTP 2
 

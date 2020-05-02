@@ -41,7 +41,7 @@ void delete_http_stream(struct http_stream *stream_data)
     {
         close(stream_data->sock);
     }
-    free(stream_data->request.path);
+    free(stream_data->request.url);
     free(stream_data);
 }
 

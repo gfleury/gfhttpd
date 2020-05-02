@@ -130,7 +130,7 @@ static void http3_start_listen(struct event_base *evbase, const char *service,
 
     if (event_add(accept_event, NULL) < 0)
     {
-      log_error("Could not create/add a accept event!\n");
+      log_error("Could not create/add a accept event!");
       return;
     }
     else if (accept_event)

@@ -5,6 +5,7 @@
 #include "router/router.h"
 
 #include <ctype.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
@@ -100,15 +101,15 @@ void http2_eventcb(struct bufferevent *bev, short events, void *ptr)
     }
     if (events & BEV_EVENT_EOF)
     {
-        log_debug("%s EOF\n", session_data->client_addr);
+        log_debug("%s EOF", session_data->client_addr);
     }
     else if (events & BEV_EVENT_ERROR)
     {
-        log_debug("%s network error\n", session_data->client_addr);
+        log_debug("%s network error", session_data->client_addr);
     }
     else if (events & BEV_EVENT_TIMEOUT)
     {
-        log_debug("%s timeout\n", session_data->client_addr);
+        log_debug("%s timeout", session_data->client_addr);
     }
     delete_http2_session_data(session_data);
 }
@@ -227,7 +228,7 @@ static int on_header_callback(nghttp2_session *session,
         }
         stream_data =
             nghttp2_session_get_stream_user_data(session, frame->hd.stream_id);
-        if (!stream_data || stream_data->request.path)
+        if (!stream_data || stream_data->request.url)
         {
             break;
         }
@@ -236,7 +237,7 @@ static int on_header_callback(nghttp2_session *session,
             size_t j;
             for (j = 0; j < valuelen && value[j] != '?'; ++j)
                 ;
-            stream_data->request.path = percent_decode(value, j);
+            stream_data->request.url = percent_decode(value, j);
         }
         if (namelen == sizeof(METHOD) - 1 && memcmp(METHOD, name, namelen) == 0)
         {
@@ -289,7 +290,7 @@ static int on_request_recv(nghttp2_session *session,
     int fd;
     nghttp2_nv hdrs[] = {MAKE_NV(":status", "200")};
 
-    if (!stream_data->request.path)
+    if (!stream_data->request.url)
     {
         if (error_reply(session, stream_data) != 0)
         {
@@ -299,8 +300,8 @@ static int on_request_recv(nghttp2_session *session,
     }
 
     log_debug("%s %s %s\n", stream_data->request.method, session_data->client_addr,
-              stream_data->request.path);
-    if (!check_path(stream_data->request.path))
+              stream_data->request.url);
+    if (!check_path(stream_data->request.url))
     {
         if (error_reply(session, stream_data) != 0)
         {
@@ -309,7 +310,7 @@ static int on_request_recv(nghttp2_session *session,
         return 0;
     }
 
-    fd = root_router(stream_data->request.path);
+    fd = root_router(session_data->app_ctx->evbase, stream_data);
     if (fd == -1)
     {
         if (error_reply(session, stream_data) != 0)
@@ -459,12 +460,20 @@ static ssize_t file_read_callback(nghttp2_session *session, int32_t stream_id,
 
     while ((r = read(fd, buf, length)) == -1 && errno == EINTR)
         ;
-    if (r == -1)
+
+    if (r < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
     {
+        log_error("read error: %s", strerror(errno));
+        return 0;
+    }
+    else if (r == -1)
+    {
+        log_error("read error: %s", strerror(errno));
         return NGHTTP2_ERR_TEMPORAL_CALLBACK_FAILURE;
     }
-    if (r == 0)
+    else if (r == 0 && (errno != EAGAIN || errno != EWOULDBLOCK))
     {
+        log_error("read error: %s", strerror(errno));
         *data_flags |= NGHTTP2_DATA_FLAG_EOF;
     }
     return r;

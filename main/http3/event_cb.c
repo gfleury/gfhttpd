@@ -101,6 +101,12 @@ static struct http_stream *create_conn(struct app_context *app_ctx, uint8_t *odc
     conn_io->sock = conns->sock;
     conn_io->app_ctx = app_ctx;
 
+    conn_io->response.http_status = "200";
+
+    // Init Headers
+    conn_io->request.headers = NULL;
+    conn_io->response.headers = NULL;
+
     http3_params->conn = conn;
 
     conn_io->http3_params = http3_params;
@@ -132,8 +138,8 @@ static int for_each_header(uint8_t *name, size_t name_len, uint8_t *value, size_
         case 4:
             if (memcmp(name, "path", sizeof("path") - 1) == 0)
             {
-                conn_io->request.path = strndup((char *)value, value_len);
-                return !check_path(conn_io->request.path);
+                conn_io->request.url = strndup((char *)value, value_len);
+                return !check_path(conn_io->request.url);
             }
             break;
 
@@ -160,6 +166,11 @@ static int for_each_header(uint8_t *name, size_t name_len, uint8_t *value, size_
 
             break;
         }
+    }
+    else
+    { // Normal headers
+        headers *h = create_header(strndup((char *)name, name_len), name_len, strndup((char *)value, value_len), value_len);
+        HASH_ADD_KEYPTR(hh, conn_io->request.headers, h->name, h->n_name, h);
     }
     return 0;
 }
@@ -356,34 +367,17 @@ void http3_event_cb(const int sock, short int which, void *arg)
                         // TODO Ship error.
                     }
 
-                    quiche_h3_header headers[] = {
-                        {
-                            .name = (const uint8_t *)":status",
-                            .name_len = sizeof(":status") - 1,
+                    // Init Response
+                    HASH_ADD_KEYPTR(hh, conn_io->response.headers, server_status.name, server_status.n_name, &server_status);
+                    insert_header(conn_io->response.headers, server_header.name, server_header.n_name, server_header.value, server_header.n_value);
+                    insert_header(conn_io->response.headers, "content-length", sizeof("content-length") - 1, "5", sizeof("5") - 1);
 
-                            .value = (const uint8_t *)"200",
-                            .value_len = sizeof("200") - 1,
-                        },
-                        {
-                            .name = (const uint8_t *)"server",
-                            .name_len = sizeof("server") - 1,
+                    conn_io->response.content_lenght = -1;
 
-                            .value = (const uint8_t *)"quiche",
-                            .value_len = sizeof("quiche") - 1,
-                        },
-                        {
-                            .name = (const uint8_t *)"content-length",
-                            .name_len = sizeof("content-length") - 1,
-
-                            .value = (const uint8_t *)"5",
-                            .value_len = sizeof("5") - 1,
-                        },
-                    };
-
-                    int fd = root_router(conn_io->request.path);
+                    int fd = root_router(conn_io->app_ctx->evbase, conn_io);
                     if (fd == -1)
                     {
-                        log_error("%s %s We are fucked, unable to root_router.", conn_io->request.method, conn_io->request.path);
+                        log_error("%s %s We are fucked, unable to root_router.", conn_io->request.method, conn_io->request.url);
                         // TODO Ship error.
                         // if (error_reply(session, stream_data) != 0)
                         // {
@@ -392,7 +386,7 @@ void http3_event_cb(const int sock, short int which, void *arg)
                         return;
                     }
 
-                    send_response(conn_io, stream_id, headers, fd);
+                    send_response(conn_io, stream_id, fd);
                     break;
                 }
 
@@ -434,7 +428,7 @@ void http3_event_cb(const int sock, short int which, void *arg)
             log_debug("Freeing the hell out of it.");
             free(conn_io->request.authority);
             free(conn_io->request.method);
-            free(conn_io->request.path);
+            free(conn_io->request.url);
             free(conn_io->request.scheme);
             free(conn_io);
         }
