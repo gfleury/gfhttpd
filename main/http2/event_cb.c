@@ -232,33 +232,38 @@ static int on_header_callback(nghttp2_session *session,
         {
             break;
         }
-        if (namelen == sizeof(PATH) - 1 && memcmp(PATH, name, namelen) == 0)
+        else if (namelen == sizeof(PATH) - 1 && memcmp(PATH, name, namelen) == 0)
         {
             size_t j;
             for (j = 0; j < valuelen && value[j] != '?'; ++j)
                 ;
             stream_data->request.url = percent_decode(value, j);
         }
-        if (namelen == sizeof(METHOD) - 1 && memcmp(METHOD, name, namelen) == 0)
+        else if (namelen == sizeof(METHOD) - 1 && memcmp(METHOD, name, namelen) == 0)
         {
             size_t j;
             for (j = 0; j < valuelen && value[j] != '?'; ++j)
                 ;
             stream_data->request.method = percent_decode(value, j);
         }
-        if (namelen == sizeof(AUTHORITY) - 1 && memcmp(AUTHORITY, name, namelen) == 0)
+        else if (namelen == sizeof(AUTHORITY) - 1 && memcmp(AUTHORITY, name, namelen) == 0)
         {
             size_t j;
             for (j = 0; j < valuelen && value[j] != '?'; ++j)
                 ;
             stream_data->request.authority = percent_decode(value, j);
         }
-        if (namelen == sizeof(SCHEME) - 1 && memcmp(SCHEME, name, namelen) == 0)
+        else if (namelen == sizeof(SCHEME) - 1 && memcmp(SCHEME, name, namelen) == 0)
         {
             size_t j;
             for (j = 0; j < valuelen && value[j] != '?'; ++j)
                 ;
             stream_data->request.scheme = percent_decode(value, j);
+        }
+        else
+        {
+            headers *h = create_header(strndup((char *)name, namelen), namelen, strndup((char *)value, valuelen), valuelen);
+            HASH_ADD_KEYPTR(hh, stream_data->request.headers, h->name, h->n_name, h);
         }
         break;
     }

@@ -11,7 +11,7 @@ void golang_cb(int fd, short event, void *arg)
 {
     struct http_stream *conn_io = arg;
 
-    int ret = Go_golang(conn_io, NULL);
+    int ret = Go_golang(conn_io, Get_address());
 
     if (ret < 0)
     {

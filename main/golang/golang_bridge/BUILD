@@ -13,7 +13,6 @@ go_binary(
     name = "golang_bridge",
     srcs = glob(["*.go"]),
     cdeps = [
-        # "//lib/golang/libevent:libevent_lib",
         "//lib:libevent",
         "//main/http_stream",
         "@uthash//:uthash_lib",
@@ -26,7 +25,4 @@ go_binary(
     importpath = "golang_bridge",
     linkmode = "c-archive",
     visibility = ["//visibility:public"],
-    deps = [
-        "//lib/golang/libevent",
-    ],
 )

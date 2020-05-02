@@ -30,9 +30,6 @@ cc_binary(
         "//main/http2",
         "//main/http3",
         "//main/log",
-        # Local libs
-        "//lib/golang/libevent:libevent_lib",
-        "//lib/golang/libevent:libevent_wrap",
         # "//lib:dir_index",
         # External deps/libs
         "@uthash//:uthash_lib",

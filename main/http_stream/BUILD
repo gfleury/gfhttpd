@@ -10,7 +10,7 @@ cc_library(
     ],
     linkstatic = True,
     visibility = [
-        "//lib/golang/golang_bridge:__pkg__",
+        "//main/golang/golang_bridge:__pkg__",
         "//main/golang:__pkg__",
         "//main/http2:__pkg__",
         "//main/http3:__pkg__",

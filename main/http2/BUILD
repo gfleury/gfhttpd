@@ -33,9 +33,5 @@ cc_library(
         # "//lib:openssl",
         "//lib:libevent",
         "//lib:nghttp2",
-        # Local libs
-        "//lib/golang/libevent:libevent_lib",
-        "//lib/golang/libevent:libevent_wrap",
-        # "//lib:dir_index",
     ],
 )

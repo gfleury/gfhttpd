@@ -62,9 +62,7 @@ configure_make(
         "libevent_pthreads.a",
     ],
     visibility = [
-        "//lib/golang/dir_index:__pkg__",
-        "//lib/golang/golang_bridge:__pkg__",
-        "//lib/golang/libevent:__pkg__",
+        "//main/golang/golang_bridge:__pkg__",
         "//main:__pkg__",
         "//main/http2:__pkg__",
         "//main/http3:__pkg__",

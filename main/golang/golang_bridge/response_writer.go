@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 const (
@@ -49,6 +50,7 @@ type responseWriter struct {
 	status        int
 	fd            *os.File
 	contentLenght *C.ulong
+	char_status   **C.char
 }
 
 var _ ResponseWriter = &responseWriter{}
@@ -79,9 +81,8 @@ func (w *responseWriter) WriteHeader(code int) {
 func (w *responseWriter) WriteHeaderNow() {
 	if !w.Written() {
 		w.size = 0
-		// Do something as if the content-lenght was 0
-		// w.ResponseWriter.WriteHeader(w.status)
 	}
+	*w.char_status = C.CString(strconv.FormatInt(int64(w.status), 10))
 }
 
 func (w *responseWriter) Write(data []byte) (n int, err error) {
