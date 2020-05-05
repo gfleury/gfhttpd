@@ -150,6 +150,12 @@ void future_write_cb(const int sock, short int which, void *arg)
     // struct connections *conns = app_ctx->conns;
     char buf[14515];
 
+    if (quiche_conn_is_closed(http3_params->conn))
+    {
+        log_debug("Connection closed, giving up.");
+        return;
+    }
+
     if (conn_io->response.headers_sent == false && conn_io->response.content_lenght != -1)
     {
         unsigned int n_headers;

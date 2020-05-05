@@ -62,11 +62,11 @@ configure_make(
         "libevent_pthreads.a",
     ],
     visibility = [
-        "//main/golang/golang_bridge:__pkg__",
         "//main:__pkg__",
         "//main/http2:__pkg__",
         "//main/http3:__pkg__",
         "//main/log:__pkg__",
+        "//modules/golang:__pkg__",
     ],
     deps = [
         # ":openssl",

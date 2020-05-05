@@ -48,6 +48,7 @@ type responseWriter struct {
 	http.ResponseWriter
 	size          int
 	status        int
+	header        http.Header
 	fd            *os.File
 	contentLenght *C.ulong
 	char_status   **C.char
@@ -111,6 +112,13 @@ func (w *responseWriter) Size() int {
 
 func (w *responseWriter) Written() bool {
 	return w.size != noWritten
+}
+
+func (w *responseWriter) Header() http.Header {
+	if w.header == nil {
+		w.header = make(http.Header)
+	}
+	return w.header
 }
 
 // Hijack implements the http.Hijacker interface.

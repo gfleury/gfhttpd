@@ -16,8 +16,7 @@ struct modules
     {
         GOLANG = 0,
         RUST = 1,
-    };
-    void(*get_hook()) = NULL;
+    } module_type;
 };
 
 #endif

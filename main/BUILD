@@ -37,5 +37,7 @@ cc_binary(
         "@boringssl//:crypto",
         "//lib:libevent",
         "//lib:nghttp2",
+        "//modules",
+        "//modules/golang",
     ],
 )

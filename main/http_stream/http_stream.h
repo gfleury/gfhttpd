@@ -27,6 +27,7 @@ typedef struct http_request
     headers *headers;
     int fd;
     size_t content_lenght;
+    char *(*get_chain)(void);
 } http_request;
 
 typedef struct http_response

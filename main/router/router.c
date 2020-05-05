@@ -41,6 +41,11 @@ int error_html(const char *html)
 
 void golang_cb(int fd, short event, void *arg);
 
+char *default_module()
+{
+    return "go_example";
+}
+
 int root_router(struct event_base *loop, struct http_stream *conn_io)
 {
     int fd;
@@ -72,6 +77,8 @@ int root_router(struct event_base *loop, struct http_stream *conn_io)
 
         fd = socket_fds[0];
         conn_io->response.fd = socket_fds[1];
+
+        conn_io->request.get_chain = &default_module;
 
         struct event *golang_event = evtimer_new(loop, golang_cb, conn_io);
         struct timeval half_sec = {0, 2000};
