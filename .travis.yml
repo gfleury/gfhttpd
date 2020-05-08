@@ -9,6 +9,6 @@ before_install:
   - docker ps -a
 
 script:
-  - docker exec -it bazel-ubuntu-build bash -c "bazel test \$(bazel query 'kind(\".*test\", //main/...)') --verbose_failures --sandbox_debug -c dbg"
-  - docker exec -it bazel-ubuntu-build bash -c "bazel test \$(bazel query 'kind(\".*test\", //modules/...)') --verbose_failures --sandbox_debug -c dbg"
+  - docker exec -it bazel-ubuntu-build bash -c "bazel test \$(bazel query 'kind(\".*test\", //main/...)') --test_output=errors --verbose_failures --sandbox_debug -c dbg"
+  - docker exec -it bazel-ubuntu-build bash -c "bazel test \$(bazel query 'kind(\".*test\", //modules/...)') --test_output=errors --verbose_failures --sandbox_debug -c dbg"
   - docker exec -it bazel-ubuntu-build bash -c "bazel build //main:gfhttpd --verbose_failures --sandbox_debug -c dbg"
