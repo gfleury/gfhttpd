@@ -8,18 +8,12 @@
 #include "config/config.h"
 #include "uthash.h"
 
-struct modules_chain
-{
-    struct module *next;
-    struct module *previous;
-};
-
 struct route
 {
     char *path;
     int n_path;
 
-    struct modules_chain *modules;
+    struct modules_chain *modules_chain;
 
     pcre2_code *re;
 

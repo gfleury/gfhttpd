@@ -7,6 +7,7 @@ cc_library(
         "//main:__pkg__",
         "//main/http2:__pkg__",
         "//main/http3:__pkg__",
+        "//main/http_stream:__pkg__",
         "//main/router:__pkg__",
         "//modules:__pkg__",
     ],

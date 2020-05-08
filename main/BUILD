@@ -14,6 +14,7 @@ cc_binary(
     copts = [
         "-DHAVE_FCNTL_H",
         "-Werror",
+        "-Imain/",
         "-Iexternal/uthash/src/",
     ],
     features = [
@@ -34,6 +35,7 @@ cc_binary(
     linkstatic = True,
     deps = [
         ":headers",
+        "//main/config:config_headers",
         "//main/http2",
         "//main/http3",
         "//main/log",

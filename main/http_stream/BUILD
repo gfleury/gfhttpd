@@ -17,6 +17,7 @@ cc_library(
         "//modules/golang:__pkg__",
     ],
     deps = [
+        "//main/config:config_headers",
         "@uthash//:uthash_lib",
     ],
 )

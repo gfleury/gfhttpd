@@ -21,4 +21,10 @@ struct module
     UT_hash_handle hh; /* makes this structure hashable by uthash */
 };
 
+struct modules_chain
+{
+    struct module *next;
+    struct module *previous;
+};
+
 #endif

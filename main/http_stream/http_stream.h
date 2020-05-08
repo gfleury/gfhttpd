@@ -7,6 +7,8 @@
 
 #include "headers.h"
 
+#include "config/config.h"
+
 #include <uthash.h>
 
 #define LOCAL_CONN_ID_LEN 16
@@ -27,7 +29,7 @@ typedef struct http_request
     headers *headers;
     int fd;
     size_t content_lenght;
-    char *(*get_chain)(void);
+    struct modules_chain *modules_chain;
 } http_request;
 
 typedef struct http_response

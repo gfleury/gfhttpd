@@ -6,6 +6,8 @@
 
 #include "http_stream/http_stream.h"
 
+#include "routes.h"
+
 #include "log/log.h"
 
 /* Returns nonzero if the string |s| ends with the substring |sub| */
@@ -46,39 +48,58 @@ char *default_module()
     return "go_example";
 }
 
+static int get_socketpair(int *socket_fds)
+{
+    int ret = 0;
+    if ((ret = socketpair(AF_UNIX, SOCK_STREAM, 0, socket_fds)) != 0)
+    {
+        log_error("Socketpair creation failed");
+        return ret;
+    }
+
+    if ((ret = fcntl(socket_fds[0], F_SETFL, O_NONBLOCK)) != 0)
+    {
+        log_error("failed to make socket non-blocking");
+        return ret;
+    }
+    if ((ret = fcntl(socket_fds[1], F_SETFL, O_NONBLOCK)) != 0)
+    {
+        log_error("failed to make socket non-blocking");
+        return ret;
+    }
+    return ret;
+}
+
 int root_router(struct event_base *loop, struct http_stream *conn_io)
 {
     int fd;
+    struct route *route;
     char *rel_path, *request_path = conn_io->request.url;
 
     for (rel_path = request_path; *rel_path == '/'; ++rel_path)
         ;
 
-    if (strcmp(rel_path, "golang") == 0)
+    // Try get specific route
+    route = get_route(rel_path);
+    if (route == NULL)
+    {
+        // Try to get route by regex
+        route = match_route(rel_path);
+    }
+
+    if (route != NULL)
     {
         int ret;
         int socket_fds[2];
-        if ((ret = socketpair(AF_UNIX, SOCK_STREAM, 0, socket_fds)) != 0)
+        if ((ret = get_socketpair(socket_fds)) != 0)
         {
-            log_error("Socketpair creation failed");
-            return ret;
-        }
-
-        if ((ret = fcntl(socket_fds[0], F_SETFL, O_NONBLOCK)) != 0)
-        {
-            log_error("failed to make socket non-blocking");
-            return ret;
-        }
-        if ((ret = fcntl(socket_fds[1], F_SETFL, O_NONBLOCK)) != 0)
-        {
-            log_error("failed to make socket non-blocking");
             return ret;
         }
 
         fd = socket_fds[0];
         conn_io->response.fd = socket_fds[1];
 
-        conn_io->request.get_chain = &default_module;
+        conn_io->request.modules_chain = route->modules_chain;
 
         struct event *golang_event = evtimer_new(loop, golang_cb, conn_io);
         struct timeval half_sec = {0, 2000};
@@ -89,6 +110,7 @@ int root_router(struct event_base *loop, struct http_stream *conn_io)
             return ret;
         }
     }
+    // For now Always return a fd from a local file (Fix it with a 404)
     else
     {
         fd = open(rel_path, O_RDONLY);
