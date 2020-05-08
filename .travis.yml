@@ -5,7 +5,7 @@ services:
 
 before_install:
   - docker build -t gfleury/bazel-ubuntu-build -f Dockerfile.build .
-  - docker run -d --rm --name bazel-ubuntu-build -v $PWD:/app -w /app --entrypoint /bin/cat gfleury/bazel-ubuntu-build
+  - docker run -dt --rm --name bazel-ubuntu-build -v $PWD:/app -w /app --entrypoint /bin/cat gfleury/bazel-ubuntu-build
   - docker ps -a
 
 script:
