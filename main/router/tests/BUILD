@@ -12,9 +12,15 @@ cc_test(
         "-Imain/",
         "-Iexternal/uthash/src/",
     ],
-    linkopts = [
-        "-framework Security",
-    ],
+    linkopts = select({
+        "@bazel_tools//src/conditions:darwin": [
+            "-framework Security",
+        ],
+        "//conditions:default": [
+            "-lstdc++",
+            "-ldl",
+        ],
+    }),
     linkstatic = True,
     visibility = [
     ],
