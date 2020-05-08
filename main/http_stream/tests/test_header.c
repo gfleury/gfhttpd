@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 
     for (int i = 0; new_names[i]; ++i)
     {
-        create_header(pheaders, new_names[i], strlen(new_names[i]), new_values[i], strlen(new_values[i]));
+        insert_header(pheaders, new_names[i], strlen(new_names[i]), new_values[i], strlen(new_values[i]));
     }
 
     for (int i = 0; new_names[i]; ++i)

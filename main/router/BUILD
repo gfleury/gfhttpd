@@ -14,7 +14,6 @@ cc_library(
         "-Iexternal/uthash/src/",
         "-Ibazel-out/darwin-dbg/bin/",
         "-Ibazel-out/darwin-fastbuild/",
-        "-g",
     ],
     # linkstatic = True,
     visibility = [
@@ -27,6 +26,7 @@ cc_library(
         "//main/log",
         "//main/config:config_headers",
         "//modules",
+        "//lib:pcre2",
         # "//modules/golang:headers",
         "@boringssl//:ssl",
         "@uthash//:uthash_lib",

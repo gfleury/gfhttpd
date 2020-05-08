@@ -56,7 +56,7 @@ genrule(
           " (export CARGO_MANIFEST_DIR=\"$$PWD/$$(dirname $(location :Cargo.toml))\";" +
           # TODO(acmcarther): This needs to be revisited as part of the cross compilation story.
           #                   See also: https://github.com/google/cargo-raze/pull/54
-          " export TARGET='x86_64-apple-darwin';" +
+          " export TARGET=$$(rustc -vV |grep host|cut -d' ' -f2);" +
           " export RUST_BACKTRACE=1;" +
           " export CARGO_FEATURE_ALLOC=1;" +
           " export CARGO_FEATURE_DEFAULT=1;" +
@@ -69,11 +69,11 @@ genrule(
           " export CARGO_PKG_NAME=ring;" +
           " export CARGO_FEATURE_ALLOC=1;" +
           " export CARGO_CFG_TARGET_ARCH=x86_64;" +
-          " export CARGO_CFG_TARGET_OS=macos;" +
+          " export CARGO_CFG_TARGET_OS=$$(([[ $$(uname) ==  Darwin ]] && echo -n macos) || echo -n linux);" +
           " export CARGO_CFG_TARGET_ENV=gnu;" +
           " export CARGO_MANIFEST_DIR='';" +
           " export OPT_LEVEL=1;" +
-          " export HOST=x86_64-macos-gnu;" +
+          " export HOST=x86_64-$$(([[ $$(uname) ==  Darwin ]] && echo -n macos) || echo -n linux)-gnu;" +
           " export DEBUG=1;" +
           " cd $$(dirname $(location :Cargo.toml)) && $$BINARY_PATH && tar -czf $$OUT_TAR -C $$OUT_DIR .)",
     tags = ["no-sandbox"],
@@ -110,6 +110,8 @@ rust_library(
     rustc_flags = [
         "--cap-lints=allow",
         "--cfg=use_proc_macro",
+        "-Lnative=./bazel-out/k8-dbg-ST-5e74b77704d3a70b08875590eb0f067cbb9a6e09f41f090f307cf0d79d4b2461/bin/external/raze__ring__0_16_12/ring.out_dir/",
+        "-Lnative=./bazel-out/k8-fastbuild-ST-5e74b77704d3a70b08875590eb0f067cbb9a6e09f41f090f307cf0d79d4b2461/bin/external/raze__ring__0_16_12/ring.out_dir/",
         "-Lnative=./bazel-out/darwin-fastbuild-ST-5e74b77704d3a70b08875590eb0f067cbb9a6e09f41f090f307cf0d79d4b2461/bin/external/raze__ring__0_16_12/ring.out_dir/",
         "-Lnative=./bazel-out/darwin-dbg-ST-5e74b77704d3a70b08875590eb0f067cbb9a6e09f41f090f307cf0d79d4b2461/bin/external/raze__ring__0_16_12/ring.out_dir/",
         "-lstatic=ring-core",

@@ -8,7 +8,7 @@ cc_library(
         "-Werror",
         "-Iexternal/uthash/src/",
     ],
-    linkstatic = True,
+    # linkstatic = True,
     visibility = [
         "//main/http2:__pkg__",
         "//main/http3:__pkg__",

@@ -21,9 +21,16 @@ cc_binary(
         "fully_static_link",
     ],
     linkopts = [
-        "-framework Security",
-        "-Wall -Werror -pedantic -fsanitize=address -g",
-    ],
+        "-Wall -Werror -pedantic -g",
+    ] + select({
+        "@bazel_tools//src/conditions:darwin": [
+            "-framework Security",
+        ],
+        "//conditions:default": [
+            "-lstdc++",
+            "-ldl",
+        ],
+    }),
     linkstatic = True,
     deps = [
         ":headers",

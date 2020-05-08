@@ -62,6 +62,17 @@ http_archive(
     ],
 )
 
+# Repository for pcre2
+http_archive(
+    name = "pcre2",
+    build_file_content = all_content,
+    sha256 = "da6aba7ba2509e918e41f4f744a59fa41a2425c59a298a232e7fe85691e00379",
+    strip_prefix = "pcre2-10.34",
+    urls = [
+        "https://ftp.pcre.org/pub/pcre/pcre2-10.34.tar.gz",
+    ],
+)
+
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 
 # Repository for uthash (used on http3 server impl)

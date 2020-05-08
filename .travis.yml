@@ -1,0 +1,14 @@
+language: c
+
+services:
+  - docker
+
+before_install:
+  - docker build -t gfleury/bazel-ubuntu-build -f Dockerfile.build .
+  - docker run -d --rm --name bazel-ubuntu-build -v $PWD:/app -w /app --entrypoint /bin/cat gfleury/bazel-ubuntu-build
+  - docker ps -a
+
+script:
+  - docker exec -it bazel-ubuntu-build bash -c "bazel test $(bazel query 'kind(".*test", //main/...)') --verbose_failures --sandbox_debug -c dbg"
+  - docker exec -it bazel-ubuntu-build bash -c "bazel test $(bazel query 'kind(".*test", //modules/...)') --verbose_failures --sandbox_debug -c dbg"
+  - docker exec -it bazel-ubuntu-build bash -c "bazel build //main:gfhttpd --verbose_failures --sandbox_debug -c dbg"

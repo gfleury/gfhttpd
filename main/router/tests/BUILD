@@ -7,8 +7,10 @@ cc_test(
         "*.h",
     ]),
     copts = [
+        "-g3",
         "-Werror",
         "-Imain/",
+        "-Iexternal/uthash/src/",
     ],
     linkopts = [
         "-framework Security",
@@ -18,5 +20,6 @@ cc_test(
     ],
     deps = [
         "//main/router",
+        "@uthash//:uthash_lib",
     ],
 )

@@ -9,7 +9,7 @@ struct config
     char *key_file;
 };
 
-struct modules
+struct module
 {
     char name[16];
     enum module_type
@@ -17,6 +17,8 @@ struct modules
         GOLANG = 0,
         RUST = 1,
     } module_type;
+
+    UT_hash_handle hh; /* makes this structure hashable by uthash */
 };
 
 #endif

@@ -81,10 +81,10 @@ configure_make(
     configure_env_vars = {
         "AR": "",
         "CXXFLAGS": "-std=c++14",
-        "OPENSSL_CFLAGS": "-Iexternal/openssl/",
-        "OPENSSL_LIBS": "-lcrypto -lssl",
-        "LIBEVENT_OPENSSL_CFLAGS": "-Iexternal/libevent",
-        "LIBEVENT_OPENSSL_LIBS": "-levent -levent_openssl",
+        # "OPENSSL_CFLAGS": "-Iexternal/openssl/",
+        # "OPENSSL_LIBS": "-lcrypto -lssl",
+        # "LIBEVENT_OPENSSL_CFLAGS": "-Iexternal/libevent",
+        # "LIBEVENT_OPENSSL_LIBS": "-levent -levent_openssl",
     },
     configure_options = [
         "--enable-shared=no",
@@ -103,5 +103,29 @@ configure_make(
         # ":openssl",
         "@boringssl//:ssl",
         "@boringssl//:crypto",
+    ],
+)
+
+# pcre2 build target
+configure_make(
+    name = "pcre2",
+    configure_env_vars = {
+        "AR": "",
+        "CXXFLAGS": "-std=c++14",
+    },
+    configure_options = [
+        "--enable-shared=no",
+        "--enable-static=yes",
+    ],
+    lib_source = "@pcre2//:all",
+    static_libraries = [
+        "libpcre2-8.a",
+        "libpcre2-posix.a",
+    ],
+    visibility = [
+        "//main:__pkg__",
+        "//main/router:__pkg__",
+    ],
+    deps = [
     ],
 )
