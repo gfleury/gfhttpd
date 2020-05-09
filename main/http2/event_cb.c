@@ -40,9 +40,6 @@ static int on_request_recv(nghttp2_session *session,
                            http2_session_data *session_data,
                            struct http_stream *stream_data);
 
-static int error_reply(nghttp2_session *session,
-                       struct http_stream *stream_data);
-
 static char *percent_decode(const uint8_t *value, size_t valuelen);
 
 static int send_response(nghttp2_session *session, int32_t stream_id,
@@ -297,10 +294,6 @@ static int on_request_recv(nghttp2_session *session,
 
     if (!stream_data->request.url)
     {
-        if (error_reply(session, stream_data) != 0)
-        {
-            return NGHTTP2_ERR_CALLBACK_FAILURE;
-        }
         return 0;
     }
 
@@ -308,20 +301,12 @@ static int on_request_recv(nghttp2_session *session,
               stream_data->request.url);
     if (!check_path(stream_data->request.url))
     {
-        if (error_reply(session, stream_data) != 0)
-        {
-            return NGHTTP2_ERR_CALLBACK_FAILURE;
-        }
         return 0;
     }
 
     fd = root_router(session_data->app_ctx->evbase, stream_data);
     if (fd == -1)
     {
-        if (error_reply(session, stream_data) != 0)
-        {
-            return NGHTTP2_ERR_CALLBACK_FAILURE;
-        }
         return 0;
     }
     stream_data->sock = fd;
@@ -331,52 +316,6 @@ static int on_request_recv(nghttp2_session *session,
     {
         close(fd);
         return NGHTTP2_ERR_CALLBACK_FAILURE;
-    }
-    return 0;
-}
-
-static int error_reply(nghttp2_session *session,
-                       struct http_stream *stream_data)
-{
-    int rv;
-    ssize_t writelen;
-    int pipefd[2];
-    nghttp2_nv hdrs[] = {MAKE_NV(":status", "404")};
-
-    rv = pipe(pipefd);
-    if (rv != 0)
-    {
-        warn("Could not create pipe");
-        rv = nghttp2_submit_rst_stream(session, NGHTTP2_FLAG_NONE,
-                                       stream_data->stream_id,
-                                       NGHTTP2_INTERNAL_ERROR);
-        if (rv != 0)
-        {
-            warnx("%s: Fatal error: %s", __AT__, nghttp2_strerror(rv));
-            return -1;
-        }
-        return 0;
-    }
-
-    char *c_error_html = NULL;
-    int error_html_size = error_html(c_error_html);
-
-    writelen = write(pipefd[1], c_error_html, error_html_size - 1);
-    close(pipefd[1]);
-
-    if (writelen != error_html_size - 1)
-    {
-        close(pipefd[0]);
-        return -1;
-    }
-
-    stream_data->sock = pipefd[0];
-
-    if (send_response(session, stream_data->stream_id, hdrs, ARRLEN(hdrs),
-                      pipefd[0]) != 0)
-    {
-        close(pipefd[0]);
-        return -1;
     }
     return 0;
 }

@@ -35,10 +35,10 @@ int check_path(const char *path)
 const char ERROR_HTML[] = "<html><head><title>404</title></head>"
                           "<body><h1>404 Not Found</h1></body></html>";
 
-int error_html(const char *html)
+const char *error_html(int *size)
 {
-    html = ERROR_HTML;
-    return sizeof(ERROR_HTML);
+    *size = sizeof(ERROR_HTML);
+    return ERROR_HTML;
 }
 
 void golang_cb(int fd, short event, void *arg);
@@ -68,6 +68,36 @@ static int get_socketpair(int *socket_fds)
         return ret;
     }
     return ret;
+}
+
+int error_fd(struct http_stream *hs, char *http_status)
+{
+    int ret;
+    ssize_t writelen;
+    int pipefd[2];
+
+    ret = pipe(pipefd);
+    if (ret != 0)
+    {
+        log_error("Unable to create pipe for error handling");
+        return ret;
+    }
+
+    int error_html_size = -1;
+    const char *c_error_html = error_html(&error_html_size);
+
+    writelen = write(pipefd[1], c_error_html, error_html_size - 1);
+    close(pipefd[1]);
+
+    if (writelen != error_html_size - 1)
+    {
+        log_error("Unable to write whole error msg, written %d / expected %d. errno: %d",
+                  writelen, error_html_size, errno);
+    }
+
+    hs->response.content_lenght = writelen;
+    hs->response.http_status = http_status;
+    return pipefd[0];
 }
 
 int root_router(struct event_base *loop, struct http_stream *conn_io)
@@ -118,5 +148,11 @@ int root_router(struct event_base *loop, struct http_stream *conn_io)
         lseek(fd, 0, SEEK_SET);
         conn_io->response.content_lenght = len;
     }
+
+    if (fd < 0)
+    {
+        fd = error_fd(conn_io, "404");
+    }
+
     return fd;
 }

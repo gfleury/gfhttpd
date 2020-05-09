@@ -18,8 +18,8 @@ int main(int argc, char *argv[])
     };
 
     struct modules_chain m_chain = {
-        .next = &m,
-        .previous = NULL,
+        .module = &m,
+        .next = NULL,
     };
 
     struct route *r = insert_route("/first_level", strlen("/first_level"), &m_chain, false);
