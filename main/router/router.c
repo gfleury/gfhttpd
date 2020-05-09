@@ -41,12 +41,7 @@ const char *error_html(int *size)
     return ERROR_HTML;
 }
 
-void golang_cb(int fd, short event, void *arg);
-
-char *default_module()
-{
-    return "go_example";
-}
+void module_cb(int fd, short event, void *arg);
 
 static int get_socketpair(int *socket_fds)
 {
@@ -93,6 +88,10 @@ int error_fd(struct http_stream *hs, char *http_status)
     {
         log_error("Unable to write whole error msg, written %d / expected %d. errno: %d",
                   writelen, error_html_size, errno);
+        if (writelen == -1)
+        {
+            return writelen;
+        }
     }
 
     hs->response.content_lenght = writelen;
@@ -131,16 +130,16 @@ int root_router(struct event_base *loop, struct http_stream *conn_io)
 
         conn_io->request.modules_chain = route->modules_chain;
 
-        struct event *golang_event = evtimer_new(loop, golang_cb, conn_io);
+        struct event *module_event = evtimer_new(loop, module_cb, conn_io);
         struct timeval half_sec = {0, 2000};
 
-        if ((ret = evtimer_add(golang_event, &half_sec)) < 0)
+        if ((ret = evtimer_add(module_event, &half_sec)) < 0)
         {
-            log_error("Could not add a golang_event event");
+            log_error("Could not add a module_event event");
             return ret;
         }
     }
-    // For now Always return a fd from a local file (Fix it with a 404)
+    // For now Always return a fd from a local file if no module match was found.
     else
     {
         fd = open(rel_path, O_RDONLY);
@@ -149,6 +148,7 @@ int root_router(struct event_base *loop, struct http_stream *conn_io)
         conn_io->response.content_lenght = len;
     }
 
+    // Handle no route error as a 404
     if (fd < 0)
     {
         fd = error_fd(conn_io, "404");

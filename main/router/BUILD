@@ -3,7 +3,7 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 cc_library(
     name = "router",
     srcs = [
-        "golang.c",
+        "module_cb.c",
         "router.c",
         "routes.c",
     ],
