@@ -14,7 +14,7 @@ static const char *JSON_STRING =
     "key_file: \"key.pem\","
     "locations:"
     "["
-    "{'location': '/golang', 'modules': ['go_example']}"
+    "{location: \"/golang\", modules: [\"go_example\"]}"
     "]"
     "}";
 
@@ -47,10 +47,8 @@ int main()
         return 1;
     }
 
-    printf("--> %s\n", config->cert_file);
-    printf("--> %s\n", config->key_file);
     assert(strcmp(config->cert_file, "file.pem") == 0);
     assert(strcmp(config->key_file, "key.pem") == 0);
 
-    return EXIT_SUCCESS;
+    return 0;
 }

@@ -40,6 +40,20 @@ static int locations_parser(const char *json, int i)
     {
         jsmntok_t *g = &t[i + j + 2];
         printf("\t Locations * %.*s\n", g->end - g->start, json + g->start);
+        if (g->type == JSMN_OBJECT)
+        {
+            for (int h = 0; h < g->size; h++)
+            {
+                jsmntok_t *k = g + 1 + h;
+                if (k->size > 0)
+                {
+                    printf("\t Key %.*s = ", k->end - k->start, json + k->start);
+                    h++;
+                    k = g + 1 + h;
+                    printf("%.*s\n", k->end - k->start, json + k->start);
+                }
+            }
+        }
     }
     i += t[i + 1].size + 1;
     return i;
@@ -61,6 +75,28 @@ int conf_load(int config_fd)
     {
         config = calloc(1, sizeof(struct config));
     }
+
+    struct config_map config_map[] = {
+        {
+            "cert_file",
+            config->cert_file,
+            sizeof(config->cert_file),
+            NULL,
+        },
+        {
+            "key_file",
+            config->key_file,
+            sizeof(config->key_file),
+            NULL,
+        },
+        {
+            "locations",
+            NULL,
+            0,
+            &locations_parser,
+        },
+        {NULL, NULL, 0, NULL},
+    };
 
     jsmn_init(&p);
 
@@ -93,28 +129,6 @@ int conf_load(int config_fd)
             }
         }
         tokcount += r;
-
-        struct config_map config_map[] = {
-            {
-                "cert_file",
-                config->cert_file,
-                sizeof(config->cert_file),
-                NULL,
-            },
-            {
-                "key_file",
-                config->key_file,
-                sizeof(config->key_file),
-                NULL,
-            },
-            {
-                "locations",
-                NULL,
-                0,
-                &locations_parser,
-            },
-            {NULL, NULL, 0, NULL},
-        };
 
         /* Loop over all keys of the root object */
         for (int i = 1; i < r; i++)
