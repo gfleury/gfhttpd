@@ -5,8 +5,8 @@
 
 struct config
 {
-    char *cert_file;
-    char *key_file;
+    char cert_file[256];
+    char key_file[256];
 };
 
 struct module
@@ -26,6 +26,17 @@ struct modules_chain
 {
     struct module *module;
     struct modules_chain *next;
+};
+
+int conf_load(int config_fd);
+extern struct config *config;
+
+struct config_map
+{
+    char *token_name;
+    char *dest;
+    int n_dest; /* dest lenght */
+    int (*array_parser_ptr)(const char *, int);
 };
 
 #endif

@@ -18,16 +18,22 @@ cc_library(
     srcs = glob(["*.c"]),
     hdrs = glob(["*.h"]),
     copts = [
+        "-g",
         "-Werror",
         "-Iexternal/uthash/src/",
+        "-Iexternal/jsmn/",
+        "-Imain/",
     ],
     visibility = [
         "//main:__pkg__",
+        "//main/config/tests:__pkg__",
         "//main/http2:__pkg__",
         "//main/http3:__pkg__",
         "//modules:__pkg__",
     ],
     deps = [
+        "//main/log",
+        "@jsmn//:jsmn_lib",
         "@uthash//:uthash_lib",
     ],
 )

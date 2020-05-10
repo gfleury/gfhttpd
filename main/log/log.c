@@ -105,19 +105,28 @@ void log_log(int level, const char *at, const char *fmt, ...)
 {
     va_list args;
     char buf[16];
+    int fd_printer;
 
-    if (level < lplog->level)
+    if (lplog == NULL)
+    {
+        fd_printer = fileno(stdout);
+    }
+    else if (level < lplog->level)
     {
         return;
+    }
+    else
+    {
+        fd_printer = lplog->fds_pipe[1];
     }
 
     time_t t = time(NULL);
     struct tm *lt = localtime(&t);
 
     buf[strftime(buf, sizeof(buf), "%H:%M:%S", lt)] = '\0';
-    dprintf(lplog->fds_pipe[1], "%s %-5s %s: ", buf, level_names[level], at);
+    dprintf(fd_printer, "%s %-5s %s: ", buf, level_names[level], at);
     va_start(args, fmt);
-    vdprintf(lplog->fds_pipe[1], fmt, args);
+    vdprintf(fd_printer, fmt, args);
     va_end(args);
-    dprintf(lplog->fds_pipe[1], "\n");
+    dprintf(fd_printer, "\n");
 }

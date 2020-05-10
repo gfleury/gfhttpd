@@ -92,6 +92,24 @@ new_git_repository(
     remote = "https://github.com/troydhanson/uthash.git",
 )
 
+# Repository for jsmn (used for config)
+# https://github.com/zserge/jsmn.git
+JSMN_BUILD = """
+cc_library(
+    name = "jsmn_lib",
+    hdrs = glob(["*.h"]),
+    visibility = ["//visibility:public"],
+)
+"""
+
+new_git_repository(
+    name = "jsmn",
+    build_file_content = JSMN_BUILD,
+    commit = "053d3cd29200edb1bfd181d917d140c16c1f8834",
+    init_submodules = 1,
+    remote = "https://github.com/zserge/jsmn.git",
+)
+
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 # BoringSSL
