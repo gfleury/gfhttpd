@@ -29,7 +29,7 @@ void module_cb(int fd, short event, void *arg)
         log_error("Something bad happened there...");
         return;
     }
-
+    // Check if writing was already done.
     if (conn_io->request.modules_chain->next->next != NULL)
     {
         conn_io->request.modules_chain->next = conn_io->request.modules_chain->next->next;

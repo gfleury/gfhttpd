@@ -12,20 +12,20 @@ cc_test(
         "-Iexternal/uthash/src/",
         "-Imain/",
     ],
-    # linkopts = select({
-    #     "@bazel_tools//src/conditions:darwin": [
-    #         "-framework Security",
-    #     ],
-    #     "//conditions:default": [
-    #         "-lstdc++",
-    #         "-ldl",
-    #     ],
-    # }),
+    linkopts = select({
+        "@bazel_tools//src/conditions:darwin": [
+            "-framework Security",
+        ],
+        "//conditions:default": [
+            "-lstdc++",
+            "-ldl",
+        ],
+    }),
     linkstatic = True,
     visibility = [
     ],
     deps = [
         "//main/config",
-        "@uthash//:uthash_lib",
+        "//main/router",
     ],
 )

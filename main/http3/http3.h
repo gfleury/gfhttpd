@@ -3,7 +3,7 @@
 
 #include <assert.h>
 
-#include "../http_stream/http_stream.h"
+#include "http_stream/http_stream.h"
 
 #ifdef _C_HTTP3
 #include <quiche.h>
@@ -31,3 +31,5 @@ void flush_egress(struct http_stream *conn_io);
 void http3_event_cb(const int sock, short int which, void *arg);
 int http3_init_sock(struct addrinfo *local);
 int http3_init_config();
+void http3_start_listen(struct event_base *evbase, const char *service,
+                        app_context *app_ctx);

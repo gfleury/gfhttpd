@@ -17,6 +17,8 @@ cc_library(
     ],
     # linkstatic = True,
     visibility = [
+        "//main/config:__pkg__",
+        "//main/config/tests:__pkg__",
         "//main/http2:__pkg__",
         "//main/http3:__pkg__",
         "//main/router/tests:__pkg__",

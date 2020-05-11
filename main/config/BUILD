@@ -33,7 +33,7 @@ cc_library(
     ],
     deps = [
         "//main/log",
+        "//main/router",
         "@jsmn//:jsmn_lib",
-        "@uthash//:uthash_lib",
     ],
 )

@@ -1,8 +1,6 @@
 #ifndef _H_CONFIG
 #define _H_CONFIG
 
-#include <uthash.h>
-
 struct config
 {
     char cert_file[256];
@@ -17,8 +15,6 @@ struct module
         GOLANG = 0,
         RUST = 1,
     } module_type;
-
-    UT_hash_handle hh; /* makes this structure hashable by uthash */
 };
 
 struct modules_chain;

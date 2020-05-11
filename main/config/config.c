@@ -1,4 +1,6 @@
 #include <fcntl.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 
 #include "log/log.h"
@@ -6,9 +8,21 @@
 #include "config.h"
 #include "config_internal.h"
 
+#include "router/routes.h"
+
 struct config *config = NULL;
 
-int jsoneq(const char *json, int i, struct config_map *config_map)
+static int jsoneq(const char *json, jsmntok_t *tok, const char *s)
+{
+    if ((tok->type == JSMN_STRING || tok->type == JSMN_PRIMITIVE) && (int)strlen(s) == tok->end - tok->start &&
+        strncmp(json + tok->start, s, tok->end - tok->start) == 0)
+    {
+        return 0;
+    }
+    return -1;
+}
+
+static int json_contains(const char *json, int i, struct config_map *config_map)
 {
     jsmntok_t *tok = &t[i];
     if (tok->type == JSMN_PRIMITIVE && (int)strlen(config_map->token_name) == tok->end - tok->start &&
@@ -31,28 +45,71 @@ int jsoneq(const char *json, int i, struct config_map *config_map)
 static int locations_parser(const char *json, int i)
 {
     int j;
-    if (t[i + 1].type != JSMN_ARRAY)
+    jsmntok_t *locations = &t[i + 1];
+
+    if (locations->type != JSMN_ARRAY)
     {
         log_error("Failed parsing configuration locations block isn't an array");
         return -1;
     }
-    for (j = 0; j < t[i + 1].size; j++)
+    for (j = 0; j < locations->size; j++)
     {
-        jsmntok_t *g = &t[i + j + 2];
-        printf("\t Locations * %.*s\n", g->end - g->start, json + g->start);
-        if (g->type == JSMN_OBJECT)
+        jsmntok_t *location = locations + j + 1;
+        log_debug("Location with %d objets * %.*s", location->size,
+                  location->end - location->start, json + location->start);
+
+        if (location->type == JSMN_OBJECT)
         {
-            for (int h = 0; h < g->size; h++)
+            struct route *r = calloc(1, sizeof(struct route));
+            for (int h = 0; h <= location->size; h++)
             {
-                jsmntok_t *k = g + 1 + h;
-                if (k->size > 0)
+                jsmntok_t *loc_keys = location + 1 + h;
+                if (jsoneq(json, loc_keys, "location") == 0)
                 {
-                    printf("\t Key %.*s = ", k->end - k->start, json + k->start);
                     h++;
-                    k = g + 1 + h;
-                    printf("%.*s\n", k->end - k->start, json + k->start);
+                    loc_keys += 1;
+                    log_debug("Location is = %.*s", loc_keys->end - loc_keys->start,
+                              json + loc_keys->start);
+
+                    r->path = strndup(json + loc_keys->start, loc_keys->end - loc_keys->start);
+                    r->n_path = loc_keys->end - loc_keys->start;
+                }
+                else if (jsoneq(json, loc_keys, "modules") == 0)
+                {
+                    struct modules_chain *previous = NULL, *first = NULL;
+                    h++;
+                    loc_keys += 1;
+                    log_debug("Modules has %d elements and is = %.*s", loc_keys->size,
+                              loc_keys->end - loc_keys->start, json + loc_keys->start);
+                    for (int m_idx = 0; m_idx < loc_keys->size; m_idx++)
+                    {
+                        jsmntok_t *modules_keys = loc_keys + 1 + m_idx;
+                        struct modules_chain *m_chain = calloc(1, sizeof(struct modules_chain));
+                        if (first == NULL)
+                        {
+                            first = m_chain;
+                        }
+
+                        m_chain->module = calloc(1, sizeof(struct module));
+
+                        m_chain->module->module_type = GOLANG;
+                        snprintf(m_chain->module->name, sizeof(m_chain->module->name), "%.*s",
+                                 modules_keys->end - modules_keys->start, json + modules_keys->start);
+
+                        if (previous != NULL)
+                        {
+                            previous->next = m_chain;
+                            previous = m_chain;
+                        }
+                        else
+                        {
+                            previous = m_chain;
+                        }
+                    }
+                    r->modules_chain = first;
                 }
             }
+            add_route(r);
         }
     }
     i += t[i + 1].size + 1;
@@ -136,7 +193,7 @@ int conf_load(int config_fd)
             for (int n = 0; config_map[n].token_name != NULL; n++)
             {
 
-                int next_token = jsoneq(buf, i, &config_map[n]);
+                int next_token = json_contains(buf, i, &config_map[n]);
                 if (next_token > 0)
                 {
                     log_debug("Setting %s with %.*s", config_map[n].token_name, t[i + 1].end - t[i + 1].start, buf + t[i + 1].start);

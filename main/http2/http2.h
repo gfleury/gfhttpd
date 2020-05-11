@@ -5,6 +5,8 @@
 
 #include <nghttp2/nghttp2.h>
 
+#include "http_stream/http_stream.h"
+
 #define ARRLEN(x) (sizeof(x) / sizeof(x[0]))
 
 #define MAKE_NV(NAME, VALUE)                                                    \
@@ -21,3 +23,6 @@ void http2_readcb(struct bufferevent *bev, void *ptr);
 void http2_writecb(struct bufferevent *bev, void *ptr);
 
 void http2_eventcb(struct bufferevent *bev, short events, void *ptr);
+
+void http2_start_listen(struct event_base *evbase, const char *service,
+                        app_context *app_ctx);

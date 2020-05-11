@@ -8,13 +8,15 @@
 
 #include "config/config.h"
 
+#include "router/routes.h"
+
 static const char *JSON_STRING =
     "{"
     "cert_file: \"file.pem\","
     "key_file: \"key.pem\","
     "locations:"
     "["
-    "{location: \"/golang\", modules: [\"go_example\"]}"
+    "{location: \"/golang\", modules: [\"go_example\", \"unexistent_module\"]}"
     "]"
     "}";
 
@@ -27,14 +29,14 @@ int main()
     if (pipe(fds) != 0)
     {
         printf("unable to create pipe\n");
-        return -1;
+        return (EXIT_FAILURE);
     }
 
     r = write(fds[1], JSON_STRING, strlen(JSON_STRING));
     if (r != strlen(JSON_STRING))
     {
         printf("write failed");
-        return -1;
+        return (EXIT_FAILURE);
     }
     printf("WRITTEN: %d\n", r);
     close(fds[1]);
@@ -44,11 +46,21 @@ int main()
     if (r < 0)
     {
         printf("Failed to parse JSON: %d, errno: %d\n", r, errno);
-        return 1;
+        return (EXIT_FAILURE);
     }
 
     assert(strcmp(config->cert_file, "file.pem") == 0);
     assert(strcmp(config->key_file, "key.pem") == 0);
 
-    return 0;
+    struct route *rr = get_route("/golang");
+    assert(rr != NULL);
+
+    assert(rr->modules_chain->module != NULL);
+
+    assert(rr->modules_chain->module->module_type == GOLANG);
+
+    assert(strncmp(rr->modules_chain->module->name, "go_example", sizeof("go_example")) == 0);
+
+    assert(strncmp(rr->modules_chain->next->module->name, "unexistent_modu", sizeof("unexistent_modu")) == 0);
+    return (EXIT_SUCCESS);
 }
