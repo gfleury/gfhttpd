@@ -15,6 +15,7 @@ void module_cb(int fd, short event, void *arg)
     switch (conn_io->request.modules_chain->module->module_type)
     {
     case GOLANG:
+        log_debug("Module %s choosen for %s", conn_io->request.modules_chain->module->name, conn_io->request.url);
         ret = Go_golang(conn_io, conn_io->request.modules_chain->module->name);
         break;
     case RUST:
@@ -30,10 +31,9 @@ void module_cb(int fd, short event, void *arg)
         return;
     }
     // Check if writing was already done.
-    if (conn_io->request.modules_chain->next->next != NULL)
+    if (conn_io->request.modules_chain->next != NULL)
     {
-        conn_io->request.modules_chain->next = conn_io->request.modules_chain->next->next;
-        conn_io->request.modules_chain->module = conn_io->request.modules_chain->next->module;
+        conn_io->request.modules_chain = conn_io->request.modules_chain->next;
         struct event *module_event = evtimer_new(conn_io->app_ctx->evbase, module_cb, conn_io);
         struct timeval half_sec = {0, 2000};
 

@@ -1,8 +1,11 @@
 #ifndef _H_CONFIG
 #define _H_CONFIG
 
+#include <stdbool.h>
+
 struct config
 {
+    char listen_port[8];
     char cert_file[256];
     char key_file[256];
 };
@@ -32,6 +35,7 @@ struct config_map
     char *token_name;
     char *dest;
     int n_dest; /* dest lenght */
+    bool required;
     int (*array_parser_ptr)(const char *, int);
 };
 

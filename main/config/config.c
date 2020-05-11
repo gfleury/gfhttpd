@@ -22,6 +22,10 @@ static int jsoneq(const char *json, jsmntok_t *tok, const char *s)
     return -1;
 }
 
+/*
+ * Returns positive number of processed tokens, 0 if the token does not means anything and -1 if 
+ * failed during token processing.
+*/
 static int json_contains(const char *json, int i, struct config_map *config_map)
 {
     jsmntok_t *tok = &t[i];
@@ -39,7 +43,7 @@ static int json_contains(const char *json, int i, struct config_map *config_map)
             return config_map->array_parser_ptr(json, i);
         }
     }
-    return -1;
+    return 0;
 }
 
 static int locations_parser(const char *json, int i)
@@ -60,7 +64,11 @@ static int locations_parser(const char *json, int i)
 
         if (location->type == JSMN_OBJECT)
         {
-            struct route *r = calloc(1, sizeof(struct route));
+            struct route r = {
+                .path = NULL,
+                .n_path = 0,
+                .modules_chain = NULL,
+            };
             for (int h = 0; h <= location->size; h++)
             {
                 jsmntok_t *loc_keys = location + 1 + h;
@@ -71,8 +79,8 @@ static int locations_parser(const char *json, int i)
                     log_debug("Location is = %.*s", loc_keys->end - loc_keys->start,
                               json + loc_keys->start);
 
-                    r->path = strndup(json + loc_keys->start, loc_keys->end - loc_keys->start);
-                    r->n_path = loc_keys->end - loc_keys->start;
+                    r.path = strndup(json + loc_keys->start, loc_keys->end - loc_keys->start);
+                    r.n_path = loc_keys->end - loc_keys->start;
                 }
                 else if (jsoneq(json, loc_keys, "modules") == 0)
                 {
@@ -106,10 +114,25 @@ static int locations_parser(const char *json, int i)
                             previous = m_chain;
                         }
                     }
-                    r->modules_chain = first;
+                    r.modules_chain = first;
                 }
             }
-            add_route(r);
+            // No module_chain found for location, can't happen
+            if (r.modules_chain == NULL || r.n_path == 0)
+            {
+                log_error("Failed to get modules or location for location %.*s", r.n_path, r.path);
+                if (r.path)
+                {
+                    free(r.path);
+                }
+                return (-1);
+            }
+            insert_route(r.path, r.n_path, r.modules_chain, true);
+        }
+        else
+        {
+            log_error("Invalid locations block, it should be an array of location object");
+            return (-1);
         }
     }
     i += t[i + 1].size + 1;
@@ -135,21 +158,31 @@ int conf_load(int config_fd)
 
     struct config_map config_map[] = {
         {
+            "listen_port",
+            config->listen_port,
+            sizeof(config->listen_port),
+            true,
+            NULL,
+        },
+        {
             "cert_file",
             config->cert_file,
             sizeof(config->cert_file),
+            true,
             NULL,
         },
         {
             "key_file",
             config->key_file,
             sizeof(config->key_file),
+            true,
             NULL,
         },
         {
             "locations",
             NULL,
             0,
+            true,
             &locations_parser,
         },
         {NULL, NULL, 0, NULL},
@@ -188,22 +221,36 @@ int conf_load(int config_fd)
         tokcount += r;
 
         /* Loop over all keys of the root object */
-        for (int i = 1; i < r; i++)
+        for (int n = 0; config_map[n].token_name != NULL; n++)
         {
-            for (int n = 0; config_map[n].token_name != NULL; n++)
+            bool found = false;
+            for (int i = 1; i < r; i++)
             {
-
                 int next_token = json_contains(buf, i, &config_map[n]);
                 if (next_token > 0)
                 {
                     log_debug("Setting %s with %.*s", config_map[n].token_name, t[i + 1].end - t[i + 1].start, buf + t[i + 1].start);
                     i += next_token;
+                    found = true;
                     break;
                 }
+                else if (next_token < 0)
+                {
+                    // Return if something went wrong on parsing
+                    r = next_token;
+                    goto exit;
+                }
+            }
+            if (config_map[n].required && !found)
+            {
+                log_error("Configuration item %s not found and it's required", config_map[n].token_name);
+                r = -1;
+                goto exit;
             }
         }
     }
 
+exit:
     fclose(cfile);
     return r;
 }

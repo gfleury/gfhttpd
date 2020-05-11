@@ -35,7 +35,7 @@ cc_binary(
     linkstatic = True,
     deps = [
         ":headers",
-        "//main/config:config_headers",
+        "//main/config",
         "//main/http2",
         "//main/http3",
         "//main/log",

@@ -1,3 +1,5 @@
+#include "config.h"
+
 #define __GFHTTPD_MAJOR__ "0"
 #define __GFHTTPD_MINOR__ "0"
 #define __GFHTTPD_PATCH__ "1"

@@ -13,7 +13,7 @@ var Mux = http.NewServeMux()
 
 func init() {
 	handle := httpHandler{}
-	Mux.Handle("/golang", &handle)
+	Mux.Handle("/go_lang_module", &handle)
 }
 
 func (hh *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {

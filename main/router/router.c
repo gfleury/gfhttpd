@@ -105,8 +105,7 @@ int root_router(struct event_base *loop, struct http_stream *conn_io)
     struct route *route;
     char *rel_path, *request_path = conn_io->request.url;
 
-    for (rel_path = request_path; *rel_path == '/'; ++rel_path)
-        ;
+    rel_path = request_path;
 
     // Try get specific route
     route = get_route(rel_path);
@@ -142,6 +141,10 @@ int root_router(struct event_base *loop, struct http_stream *conn_io)
     // For now Always return a fd from a local file if no module match was found.
     else
     {
+        // Remove root slash for local files
+        for (rel_path = request_path; *rel_path == '/'; ++rel_path)
+            ;
+
         fd = open(rel_path, O_RDONLY);
         int len = lseek(fd, 0, SEEK_END);
         lseek(fd, 0, SEEK_SET);
@@ -151,6 +154,7 @@ int root_router(struct event_base *loop, struct http_stream *conn_io)
     // Handle no route error as a 404
     if (fd < 0)
     {
+        log_debug("No handler found for %s", rel_path);
         fd = error_fd(conn_io, "404");
     }
 

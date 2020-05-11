@@ -1,14 +1,9 @@
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif /* HAVE_CONFIG_H */
+#include "gfhttpd.h"
 
 #include <sys/types.h>
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif /* HAVE_SYS_SOCKET_H */
-#ifdef HAVE_NETDB_H
-#include <netdb.h>
-#endif /* HAVE_NETDB_H */
 #include <signal.h>
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
@@ -28,7 +23,6 @@
 #include <errno.h>
 #include <string.h>
 
-#include "gfhttpd.h"
 #include "log/log.h"
 
 #include "http2/http2.h"
@@ -51,8 +45,7 @@ static void initialize_app_context(app_context *app_ctx, SSL_CTX *ssl_ctx,
   app_ctx->evbase = evbase;
 }
 
-static void run(const char *service, const char *key_file,
-                const char *cert_file)
+static void run()
 {
   SSL_CTX *ssl_ctx;
   app_context app_ctx;
@@ -69,12 +62,12 @@ static void run(const char *service, const char *key_file,
 
   log_info("Logging initialized, starting gfhttpd-%s", GFHTTPD_VERSION);
 
-  ssl_ctx = create_ssl_ctx(key_file, cert_file);
+  ssl_ctx = create_ssl_ctx(config->key_file, config->cert_file);
 
   initialize_app_context(&app_ctx, ssl_ctx, evbase);
 
-  http2_start_listen(evbase, service, &app_ctx);
-  http3_start_listen(evbase, service, &app_ctx);
+  http2_start_listen(evbase, config->listen_port, &app_ctx);
+  http3_start_listen(evbase, config->listen_port, &app_ctx);
 
   event_base_loop(evbase, EVLOOP_NO_EXIT_ON_EMPTY);
 
@@ -83,13 +76,59 @@ static void run(const char *service, const char *key_file,
   SSL_CTX_free(ssl_ctx);
 }
 
+void usage()
+{
+  printf("Usage:\n\t-v \t\tprints version and exit\n\t-c config_file\t"
+         "load configuration from file (default etc/conf.json)\n\n");
+}
+
 int main(int argc, char **argv)
 {
   struct sigaction act;
+  char *config_file = "etc/conf.json";
+  int opt, fconf;
 
-  if (argc < 4)
+  // put ':' in the starting of the
+  // string so that program can
+  //distinguish between '?' and ':'
+  while ((opt = getopt(argc, argv, ":vc:")) != -1)
   {
-    fprintf(stderr, "Usage: libevent-server PORT KEY_FILE CERT_FILE\n");
+    switch (opt)
+    {
+    case 'v':
+      printf("gfhttpd-%s\n", GFHTTPD_VERSION);
+      break;
+    case 'c':
+      config_file = optarg;
+      break;
+    case ':':
+      usage();
+      break;
+    case '?':
+    default:
+      printf("unknown option: %c\n", optopt);
+      usage();
+      return (EXIT_FAILURE);
+    }
+  }
+
+  if (optind < argc)
+  {
+    printf("unknow option: %s\n", argv[optind]);
+    usage();
+    return (EXIT_FAILURE);
+  }
+
+  fconf = open(config_file, O_RDONLY, 0);
+  if (fconf < 0)
+  {
+    printf("Failed to open file %s for configuration reading. errno: %d\n", config_file, errno);
+    return (EXIT_FAILURE);
+  }
+
+  if (conf_load(fconf) < 0)
+  {
+    printf("Failed to load %s configuration file. errno: %d\n", config_file, errno);
     return (EXIT_FAILURE);
   }
 
@@ -100,6 +139,6 @@ int main(int argc, char **argv)
   SSL_load_error_strings();
   SSL_library_init();
 
-  run(argv[1], argv[2], argv[3]);
+  run();
   return (EXIT_SUCCESS);
 }

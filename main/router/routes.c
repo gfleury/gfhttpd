@@ -75,7 +75,7 @@ struct route *match_route(char *s)
                 continue;
             // Handle other special cases if you like
             default:
-                printf("Matching error %d\n", rc);
+                log_error("PCRE2 Matching error %d", rc);
                 break;
             }
             return NULL;
@@ -96,6 +96,7 @@ struct route *insert_route(char *path, int n_path, struct modules_chain *m, bool
     r = (struct route *)calloc(1, sizeof *r);
     r->path = path;
     r->n_path = n_path;
+    r->modules_chain = m;
     if (!regex)
     {
         r->re = NULL;
