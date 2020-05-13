@@ -45,11 +45,24 @@ static void initialize_app_context(app_context *app_ctx, SSL_CTX *ssl_ctx,
   app_ctx->evbase = evbase;
 }
 
+/* Here's a callback function that calls loopbreak */
+static void stop_cb(evutil_socket_t sig, short events, void *arg)
+{
+  struct event_base *evbase = arg;
+  struct timeval two_sec = {2, 0};
+
+  log_info("Caught an interrupt signal; exiting cleanly in two seconds.");
+
+  event_base_loopexit(evbase, &two_sec);
+}
+
 static void run()
 {
   SSL_CTX *ssl_ctx;
   app_context app_ctx;
   struct event_base *evbase;
+  struct event *watchdog_event;
+
   struct log plog;
 
   evbase = event_base_new();
@@ -62,16 +75,23 @@ static void run()
 
   log_info("Logging initialized, starting gfhttpd-%s", GFHTTPD_VERSION);
 
-  ssl_ctx = create_ssl_ctx(config->key_file, config->cert_file);
-
+  // ssl_ctx = create_ssl_ctx(config->key_file, config->cert_file);
+  ssl_ctx = NULL;
   initialize_app_context(&app_ctx, ssl_ctx, evbase);
 
-  http2_start_listen(evbase, config->listen_port, &app_ctx);
+  // http2_start_listen(evbase, config->listen_port, &app_ctx);
   http3_start_listen(evbase, config->listen_port, &app_ctx);
+
+  watchdog_event = evsignal_new(evbase, SIGINT, stop_cb, (void *)evbase);
+
+  event_add(watchdog_event, NULL);
 
   event_base_loop(evbase, EVLOOP_NO_EXIT_ON_EMPTY);
 
+  http3_cleanup(&app_ctx);
+
   destroy_log(&plog);
+
   event_base_free(evbase);
   SSL_CTX_free(ssl_ctx);
 }

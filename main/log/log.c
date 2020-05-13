@@ -98,7 +98,7 @@ void destroy_log(struct log *plog)
     event_free(plog->evpipe);
     close(plog->fds_pipe[0]);
     close(plog->fds_pipe[1]);
-    free(plog);
+    // free(plog);
 }
 
 void log_log(int level, const char *at, const char *fmt, ...)

@@ -17,7 +17,7 @@ extern quiche_h3_config *http3_config;
 extern void timeout_cb(const int sock, short int which, void *arg);
 extern void http3_write_cb(const int sock, short int which, void *arg);
 
-extern void flush_egress(struct http_stream *conn_io);
+extern void flush_egress(struct http_stream *hs);
 
 static void mint_token(const uint8_t *dcid, size_t dcid_len,
                        struct sockaddr_storage *addr, socklen_t addr_len,
@@ -65,13 +65,13 @@ static bool validate_token(const uint8_t *token, size_t token_len,
 static struct http_stream *create_conn(struct app_context *app_ctx, uint8_t *odcid, size_t odcid_len)
 {
     struct http3_params *http3_params = calloc(1, sizeof(struct http3_params));
-    struct http_stream *conn_io = calloc(1, sizeof(*conn_io));
+    struct http_stream *hs = calloc(1, sizeof(*hs));
 
     struct connections *conns = app_ctx->conns;
 
-    if (conn_io == NULL)
+    if (hs == NULL)
     {
-        log_error("failed to allocate connection IO");
+        log_error("failed to allocate http stream");
         return NULL;
     }
 
@@ -82,7 +82,7 @@ static struct http_stream *create_conn(struct app_context *app_ctx, uint8_t *odc
         return NULL;
     }
 
-    ssize_t rand_len = read(rng, conn_io->cid, LOCAL_CONN_ID_LEN);
+    ssize_t rand_len = read(rng, hs->cid, LOCAL_CONN_ID_LEN);
     close(rng);
     if (rand_len < 0)
     {
@@ -90,7 +90,7 @@ static struct http_stream *create_conn(struct app_context *app_ctx, uint8_t *odc
         return NULL;
     }
 
-    quiche_conn *conn = quiche_accept(conn_io->cid, LOCAL_CONN_ID_LEN,
+    quiche_conn *conn = quiche_accept(hs->cid, LOCAL_CONN_ID_LEN,
                                       odcid, odcid_len, pquiche_config);
     if (conn == NULL)
     {
@@ -98,33 +98,33 @@ static struct http_stream *create_conn(struct app_context *app_ctx, uint8_t *odc
         return NULL;
     }
 
-    conn_io->sock = conns->sock;
-    conn_io->app_ctx = app_ctx;
+    hs->sock = conns->sock;
+    hs->app_ctx = app_ctx;
 
-    conn_io->response.http_status = "200";
+    hs->response.http_status = "200";
 
     // Init Headers
-    conn_io->request.headers = NULL;
-    conn_io->response.headers = NULL;
+    hs->request.headers = NULL;
+    hs->response.headers = NULL;
 
     http3_params->conn = conn;
 
-    conn_io->http3_params = http3_params;
+    hs->http3_params = http3_params;
 
-    conn_io->timeout_ev = evtimer_new(app_ctx->evbase, timeout_cb, conn_io);
-    evtimer_add(conn_io->timeout_ev, &conn_io->timer);
+    hs->timeout_ev = evtimer_new(app_ctx->evbase, timeout_cb, hs);
+    evtimer_add(hs->timeout_ev, &hs->timer);
 
-    HASH_ADD(hh, conns->h, cid, LOCAL_CONN_ID_LEN, conn_io);
+    HASH_ADD(hh, conns->h, cid, LOCAL_CONN_ID_LEN, hs);
 
     log_debug("new connection");
 
-    return conn_io;
+    return hs;
 }
 
 static int for_each_header(uint8_t *name, size_t name_len, uint8_t *value, size_t value_len, void *argp)
 {
-    struct http_stream *conn_io = argp;
-    assert(conn_io != NULL);
+    struct http_stream *hs = argp;
+    assert(hs != NULL);
 
     log_debug("got HTTP header: %.*s=%.*s", (int)name_len, name, (int)value_len, value);
 
@@ -138,21 +138,21 @@ static int for_each_header(uint8_t *name, size_t name_len, uint8_t *value, size_
         case 4:
             if (memcmp(name, "path", sizeof("path") - 1) == 0)
             {
-                conn_io->request.url = strndup((char *)value, value_len);
-                return !check_path(conn_io->request.url);
+                hs->request.url = strndup((char *)value, value_len);
+                return !check_path(hs->request.url);
             }
             break;
 
         case 6:
             if (memcmp(name, "method", sizeof("method") - 1) == 0)
             {
-                conn_io->request.method = strndup((char *)value, value_len);
+                hs->request.method = strndup((char *)value, value_len);
                 return 0;
             }
 
             if (memcmp(name, "scheme", sizeof("scheme") - 1) == 0)
             {
-                conn_io->request.scheme = strndup((char *)value, value_len);
+                hs->request.scheme = strndup((char *)value, value_len);
                 return 0;
             }
             break;
@@ -160,7 +160,7 @@ static int for_each_header(uint8_t *name, size_t name_len, uint8_t *value, size_
         case 9:
             if (memcmp(name, "authority", sizeof("authority") - 1) == 0)
             {
-                conn_io->request.authority = strndup((char *)value, value_len);
+                hs->request.authority = strndup((char *)value, value_len);
                 return 0;
             }
 
@@ -169,15 +169,15 @@ static int for_each_header(uint8_t *name, size_t name_len, uint8_t *value, size_
     }
     else
     { // Normal headers
-        headers *h = create_header(strndup((char *)name, name_len), name_len, strndup((char *)value, value_len), value_len);
-        HASH_ADD_KEYPTR(hh, conn_io->request.headers, h->name, h->n_name, h);
+        headers *h = create_header(strndup((char *)name, name_len), name_len, strndup((char *)value, value_len), value_len, true);
+        HASH_ADD_KEYPTR(hh, hs->request.headers, h->name, h->n_name, h);
     }
     return 0;
 }
 
 void http3_event_cb(const int sock, short int which, void *arg)
 {
-    struct http_stream *tmp, *conn_io = NULL;
+    struct http_stream *tmp, *hs = NULL;
 
     struct app_context *app_ctx = arg;
     struct connections *conns = app_ctx->conns;
@@ -231,9 +231,9 @@ void http3_event_cb(const int sock, short int which, void *arg)
             return;
         }
 
-        HASH_FIND(hh, conns->h, dcid, dcid_len, conn_io);
+        HASH_FIND(hh, conns->h, dcid, dcid_len, hs);
 
-        if (conn_io == NULL)
+        if (hs == NULL)
         {
             if (!quiche_version_is_supported(version))
             {
@@ -303,17 +303,17 @@ void http3_event_cb(const int sock, short int which, void *arg)
                 return;
             }
 
-            conn_io = create_conn(app_ctx, odcid, odcid_len);
-            if (conn_io == NULL)
+            hs = create_conn(app_ctx, odcid, odcid_len);
+            if (hs == NULL)
             {
                 return;
             }
 
-            memcpy(&conn_io->peer_addr, &peer_addr, peer_addr_len);
-            conn_io->peer_addr_len = peer_addr_len;
+            memcpy(&hs->peer_addr, &peer_addr, peer_addr_len);
+            hs->peer_addr_len = peer_addr_len;
         }
 
-        struct http3_params *http3_params = conn_io->http3_params;
+        struct http3_params *http3_params = hs->http3_params;
 
         ssize_t done = quiche_conn_recv(http3_params->conn, buf, read);
 
@@ -359,7 +359,7 @@ void http3_event_cb(const int sock, short int which, void *arg)
                 {
                 case QUICHE_H3_EVENT_HEADERS:
                 {
-                    int rc = quiche_h3_event_for_each_header(ev, for_each_header, conn_io);
+                    int rc = quiche_h3_event_for_each_header(ev, for_each_header, hs);
 
                     if (rc != 0)
                     {
@@ -368,25 +368,20 @@ void http3_event_cb(const int sock, short int which, void *arg)
                     }
 
                     // Init Response
-                    HASH_ADD_KEYPTR(hh, conn_io->response.headers, server_status.name, server_status.n_name, &server_status);
-                    insert_header(conn_io->response.headers, server_header.name, server_header.n_name, server_header.value, server_header.n_value);
-                    insert_header(conn_io->response.headers, "content-length", sizeof("content-length") - 1, "5", sizeof("5") - 1);
+                    HASH_ADD_KEYPTR(hh, hs->response.headers, server_status.name, server_status.n_name, &server_status);
+                    insert_header(hs->response.headers, server_header.name, server_header.n_name, server_header.value, server_header.n_value);
+                    insert_header(hs->response.headers, "content-length", sizeof("content-length") - 1, "5", sizeof("5") - 1);
 
-                    conn_io->response.content_lenght = -1;
+                    hs->response.content_lenght = -1;
 
-                    int fd = root_router(conn_io->app_ctx->evbase, conn_io);
+                    int fd = root_router(hs->app_ctx->evbase, hs);
                     if (fd == -1)
                     {
-                        log_error("%s %s We are fucked, unable to root_router.", conn_io->request.method, conn_io->request.url);
-                        // TODO Ship error.
-                        // if (error_reply(session, stream_data) != 0)
-                        // {
-                        //     return NGHTTP2_ERR_CALLBACK_FAILURE;
-                        // }
+                        log_error("%s %s We are fucked, unable to root_router.", hs->request.method, hs->request.url);
                         return;
                     }
 
-                    send_response(conn_io, stream_id, fd);
+                    send_response(hs, stream_id, fd);
                     break;
                 }
 
@@ -406,10 +401,12 @@ void http3_event_cb(const int sock, short int which, void *arg)
         }
     }
 
-    HASH_ITER(hh, conns->h, conn_io, tmp)
+    int c = 0;
+    HASH_ITER(hh, conns->h, hs, tmp)
     {
-        struct http3_params *http3_params = conn_io->http3_params;
-        flush_egress(conn_io);
+        log_debug("Going thru loop connection count %d", c++);
+        struct http3_params *http3_params = hs->http3_params;
+        flush_egress(hs);
 
         if (quiche_conn_is_closed(http3_params->conn))
         {
@@ -419,18 +416,8 @@ void http3_event_cb(const int sock, short int which, void *arg)
             log_info("connection closed, recv=%zu sent=%zu lost=%zu rtt=%" PRIu64 "ns cwnd=%zu",
                      stats.recv, stats.sent, stats.lost, stats.rtt, stats.cwnd);
 
-            HASH_DELETE(hh, conns->h, conn_io);
-
-            evtimer_del(conn_io->timeout_ev);
-
-            quiche_conn_free(http3_params->conn);
-
-            log_debug("Freeing the hell out of it.");
-            free(conn_io->request.authority);
-            free(conn_io->request.method);
-            free(conn_io->request.url);
-            free(conn_io->request.scheme);
-            free(conn_io);
+            HASH_DELETE(hh, conns->h, hs);
+            http3_connection_cleanup(hs);
         }
     }
 }

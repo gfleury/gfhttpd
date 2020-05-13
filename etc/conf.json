@@ -1,0 +1,13 @@
+{
+    listen_port: "8444",
+    key_file: "cert/example-com.key.pem",
+    cert_file: "cert/example-com.cert.pem",
+    locations: [
+        {
+        location: "^/go_lang_module(.*)", 
+        modules: [
+                "go_example",
+            ]
+        }
+    ]
+}

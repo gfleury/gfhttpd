@@ -24,8 +24,8 @@ struct http3_params
 extern void debug_log(const char *line, void *argp);
 extern quiche_config *pquiche_config;
 extern quiche_h3_config *http3_config;
-int send_response(struct http_stream *conn_io, int64_t stream_id, int fd);
-void flush_egress(struct http_stream *conn_io);
+int send_response(struct http_stream *hs, int64_t stream_id, int fd);
+void flush_egress(struct http_stream *hs);
 #endif
 
 void http3_event_cb(const int sock, short int which, void *arg);
@@ -33,3 +33,5 @@ int http3_init_sock(struct addrinfo *local);
 int http3_init_config();
 void http3_start_listen(struct event_base *evbase, const char *service,
                         app_context *app_ctx);
+void http3_cleanup(struct app_context *app_ctx);
+void http3_connection_cleanup(struct http_stream *hs);

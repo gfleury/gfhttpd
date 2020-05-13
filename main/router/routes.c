@@ -6,6 +6,8 @@
 
 struct route *routes = NULL;
 
+static char *ROOT = "/";
+
 pcre2_code *parse_regex(PCRE2_SPTR pattern)
 {
     pcre2_code *re;
@@ -32,16 +34,16 @@ pcre2_code *parse_regex(PCRE2_SPTR pattern)
     return re;
 }
 
-struct route *match_route(char *s)
+int match_route(char *s, struct route_match *rm)
 {
     PCRE2_SPTR subject = (PCRE2_SPTR)s;
     PCRE2_SIZE subject_length;
     struct route *r, *tmp;
-    int rc;
+    int ret;
 
     if (!subject)
     {
-        return NULL;
+        return -1;
     }
     subject_length = (PCRE2_SIZE)strlen(s);
 
@@ -55,7 +57,7 @@ struct route *match_route(char *s)
         pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(r->re, NULL);
 
         /* Now run the match. */
-        rc = pcre2_match(
+        ret = pcre2_match(
             r->re,          /* the compiled pattern */
             subject,        /* the subject string */
             subject_length, /* the length of the subject */
@@ -64,29 +66,66 @@ struct route *match_route(char *s)
             match_data,     /* block for storing the result */
             NULL);          /* use default match context */
 
-        pcre2_match_data_free(match_data);
-
-        if (rc < 0)
+        if (ret < 0)
         {
-            switch (rc)
+            // No match, not going to use it anymore
+            pcre2_match_data_free(match_data);
+
+            switch (ret)
             {
+            // No match
             case PCRE2_ERROR_NOMATCH:
-                // No match
                 continue;
             // Handle other special cases if you like
             default:
-                log_error("PCRE2 Matching error %d", rc);
+                log_error("PCRE2 Matching error %d", ret);
                 break;
             }
-            return NULL;
+            return -1;
         }
         else
         {
+            // Found a match
+            rm->route = r;
+            PCRE2_SIZE *ovector;
+            ovector = pcre2_get_ovector_pointer(match_data);
+            log_debug("Match succeeded at offset %d", (int)ovector[0]);
+
+            if (ret == 0)
+            {
+                log_error("Ovector was not big enough for all the captured substrings");
+            }
+            else
+            {
+                int idx = ret - 1;
+                PCRE2_SPTR substring_start = subject + ovector[2 * idx];
+                PCRE2_SIZE substring_length = ovector[2 * idx + 1] - ovector[2 * idx];
+                log_debug("Found remaining substring - %2d: %.*s\n", ret, (int)substring_length, (char *)substring_start);
+
+                // Exact match, no second part on path
+                if (idx == 0)
+                {
+                    s = ROOT;
+                }
+                else
+                {
+                    // Strip found match path from full path to pass it to the modules
+                    PCRE2_SIZE fullmatch_length = ovector[2 * 0 + 1] - ovector[2 * 0];
+                    s += (int)(fullmatch_length - substring_length);
+                    log_debug("Going with - %s", s);
+                    // Find the previous slash
+                    for (; *s != '/'; s--)
+                        ;
+                }
+
+                rm->stripped_path = s;
+            }
+            ret = 0;
             break;
         }
     }
 
-    return r;
+    return ret;
 }
 
 struct route *insert_route(char *path, int n_path, struct modules_chain *m, bool regex)
@@ -134,11 +173,21 @@ void add_route(struct route *r)
     HASH_ADD_KEYPTR(hh, routes, r->path, r->n_path, r);
 }
 
-struct route *get_route(char *path)
+int get_route(char *path, struct route_match *rm)
 {
     struct route *r;
     HASH_FIND_STR(routes, path, r);
-    return r;
+    if (r != NULL)
+    {
+        rm->route = r;
+        // Strip found path from path to pass it to the modules
+        rm->stripped_path = ROOT;
+    }
+    else
+    {
+        return -1;
+    }
+    return 0;
 }
 
 void delete_route(struct route *r)

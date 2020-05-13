@@ -5,6 +5,7 @@ headers server_header = {
     .n_name = sizeof("server") - 1,
     .value = "quiche",
     .n_value = sizeof("quiche") - 1,
+    .must_free = false,
 };
 
 headers server_status = {
@@ -12,15 +13,17 @@ headers server_status = {
     .n_name = sizeof(":status") - 1,
     .value = "200",
     .n_value = sizeof("200") - 1,
+    .must_free = false,
 };
 
-headers *create_header(char *name, int n_name, char *value, int n_value)
+headers *create_header(char *name, int n_name, char *value, int n_value, bool must_free)
 {
     headers *header = calloc(1, sizeof(headers));
     header->name = name;
     header->n_name = n_name;
     header->value = value;
     header->n_value = n_value;
+    header->must_free = must_free;
     return header;
 }
 
@@ -38,6 +41,8 @@ headers *insert_header(headers *pheaders, char *name, int n_name, char *value, i
     }
     header->value = value;
     header->n_value = n_value;
+
+    header->must_free = false;
 
     return header;
 }
@@ -67,6 +72,11 @@ void delete_header_all(headers *pheaders)
     HASH_ITER(hh, pheaders, current, tmp)
     {
         HASH_DEL(pheaders, current); /* delete; users advances to next */
+        if (current->must_free)
+        {
+            free(current->name);
+            free(current->value);
+        }
         free(current);
     }
 }

@@ -99,21 +99,26 @@ int error_fd(struct http_stream *hs, char *http_status)
     return pipefd[0];
 }
 
-int root_router(struct event_base *loop, struct http_stream *conn_io)
+int root_router(struct event_base *loop, struct http_stream *hs)
 {
     int fd;
     struct route *route;
-    char *rel_path, *request_path = conn_io->request.url;
+    char *rel_path, *request_path = hs->request.url;
+    struct route_match rm = {
+        NULL,
+        NULL,
+    };
 
     rel_path = request_path;
 
     // Try get specific route
-    route = get_route(rel_path);
-    if (route == NULL)
+    if (get_route(rel_path, &rm) == -1)
     {
         // Try to get route by regex
-        route = match_route(rel_path);
+        match_route(rel_path, &rm);
     }
+
+    route = rm.route;
 
     if (route != NULL)
     {
@@ -125,11 +130,13 @@ int root_router(struct event_base *loop, struct http_stream *conn_io)
         }
 
         fd = socket_fds[0];
-        conn_io->response.fd = socket_fds[1];
+        hs->response.fd = socket_fds[1];
 
-        conn_io->request.modules_chain = route->modules_chain;
+        hs->request.modules_chain = route->modules_chain;
 
-        struct event *module_event = evtimer_new(loop, module_cb, conn_io);
+        hs->request.modules_url = rm.stripped_path;
+
+        struct event *module_event = evtimer_new(loop, module_cb, hs);
         struct timeval half_sec = {0, 2000};
 
         if ((ret = evtimer_add(module_event, &half_sec)) < 0)
@@ -148,14 +155,14 @@ int root_router(struct event_base *loop, struct http_stream *conn_io)
         fd = open(rel_path, O_RDONLY);
         int len = lseek(fd, 0, SEEK_END);
         lseek(fd, 0, SEEK_SET);
-        conn_io->response.content_lenght = len;
+        hs->response.content_lenght = len;
     }
 
     // Handle no route error as a 404
     if (fd < 0)
     {
         log_debug("No handler found for %s", rel_path);
-        fd = error_fd(conn_io, "404");
+        fd = error_fd(hs, "404");
     }
 
     return fd;

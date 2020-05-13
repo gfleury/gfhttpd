@@ -3,20 +3,21 @@ package go_example
 import (
 	"fmt"
 	"html"
+	"time"
 	"net/http"
 )
-
-type httpHandler struct {
-}
 
 var Mux = http.NewServeMux()
 
 func init() {
-	handle := httpHandler{}
-	Mux.Handle("/go_lang_module", &handle)
+	Mux.HandleFunc("/date", func(w http.ResponseWriter, req *http.Request) {
+		currentTime := time.Now()
+		fmt.Fprintf(w, "Current Time in String: %s\n", currentTime.String())
+	})
+	Mux.HandleFunc("/", ServeRoot)
 }
 
-func (hh *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func ServeRoot(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 	fmt.Fprintf(w, "Hello, %q %s\n", html.EscapeString(r.URL.Path), r.Header)
 }

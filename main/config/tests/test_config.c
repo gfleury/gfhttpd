@@ -60,16 +60,22 @@ int test_load_conf()
     assert(strcmp(config->cert_file, "file.pem") == 0);
     assert(strcmp(config->key_file, "key.pem") == 0);
 
-    struct route *rr = get_route("/golang");
-    assert(rr != NULL);
+    struct route_match rm = {
+        NULL,
+        NULL,
+    };
 
-    assert(rr->modules_chain->module != NULL);
+    r = get_route("/golang", &rm);
+    assert(r == 0);
+    assert(rm.route != NULL);
 
-    assert(rr->modules_chain->module->module_type == GOLANG);
+    assert(rm.route->modules_chain->module != NULL);
 
-    assert(strncmp(rr->modules_chain->module->name, "go_example", sizeof("go_example")) == 0);
+    assert(rm.route->modules_chain->module->module_type == GOLANG);
 
-    assert(strncmp(rr->modules_chain->next->module->name, "unexistent_modu", sizeof("unexistent_modu")) == 0);
+    assert(strncmp(rm.route->modules_chain->module->name, "go_example", sizeof("go_example")) == 0);
+
+    assert(strncmp(rm.route->modules_chain->next->module->name, "unexistent_modu", sizeof("unexistent_modu")) == 0);
     return (EXIT_SUCCESS);
 }
 

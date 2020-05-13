@@ -20,12 +20,18 @@ struct route
     UT_hash_handle hh; /* makes this structure hashable by uthash */
 };
 
+struct route_match
+{
+    struct route *route;
+    char *stripped_path;
+};
+
 unsigned int length_routes();
 void delete_routes_all();
 void delete_route(struct route *r);
-struct route *get_route(char *path);
 void add_route(struct route *r);
 struct route *insert_route(char *path, int n_path, struct modules_chain *m, bool regex);
 struct route *create_route(char *path, int n_path, struct modules_chain *m, bool regex);
-struct route *match_route(char *subject);
+int get_route(char *path, struct route_match *rm);
+int match_route(char *subject, struct route_match *rm);
 #endif

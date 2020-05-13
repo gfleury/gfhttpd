@@ -23,6 +23,7 @@ typedef struct app_context
 typedef struct http_request
 {
     char *url;
+    char *modules_url;
     char *method;
     char *authority;
     char *scheme;

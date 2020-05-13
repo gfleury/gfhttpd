@@ -15,7 +15,7 @@ import (
 //export Go_golang
 func Go_golang(hs *C.struct_http_stream, module *C.char) C.int {
 	method := C.GoString(hs.request.method)
-	url := C.GoString(hs.request.url)
+	url := C.GoString(hs.request.modules_url)
 	request, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		fmt.Println(err.Error())

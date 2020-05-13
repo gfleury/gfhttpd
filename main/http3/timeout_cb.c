@@ -8,20 +8,20 @@
 #include "http3.h"
 #include "log/log.h"
 
-extern void flush_egress(struct http_stream *conn_io);
+extern void flush_egress(struct http_stream *hs);
 
 void timeout_cb(const int sock, short int which, void *arg)
 {
-    struct http_stream *conn_io = arg;
-    struct http3_params *http3_params = conn_io->http3_params;
-    struct app_context *app_ctx = conn_io->app_ctx;
+    struct http_stream *hs = arg;
+    struct http3_params *http3_params = hs->http3_params;
+    struct app_context *app_ctx = hs->app_ctx;
     struct connections *conns = app_ctx->conns;
 
     quiche_conn_on_timeout(http3_params->conn);
 
     log_debug("timeout");
 
-    flush_egress(conn_io);
+    flush_egress(hs);
 
     if (quiche_conn_is_closed(http3_params->conn))
     {
@@ -31,11 +31,8 @@ void timeout_cb(const int sock, short int which, void *arg)
         log_debug("connection closed, recv=%zu sent=%zu lost=%zu rtt=%" PRIu64 "ns cwnd=%zu",
                   stats.recv, stats.sent, stats.lost, stats.rtt, stats.cwnd);
 
-        HASH_DELETE(hh, conns->h, conn_io);
-
-        evtimer_del(conn_io->timeout_ev);
-        quiche_conn_free(http3_params->conn);
-        free(conn_io);
+        HASH_DELETE(hh, conns->h, hs);
+        http3_connection_cleanup(hs);
 
         return;
     }

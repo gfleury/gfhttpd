@@ -9,20 +9,20 @@
 
 void module_cb(int fd, short event, void *arg)
 {
-    struct http_stream *conn_io = arg;
+    struct http_stream *hs = arg;
     int ret = -1;
 
-    switch (conn_io->request.modules_chain->module->module_type)
+    switch (hs->request.modules_chain->module->module_type)
     {
     case GOLANG:
-        log_debug("Module %s choosen for %s", conn_io->request.modules_chain->module->name, conn_io->request.url);
-        ret = Go_golang(conn_io, conn_io->request.modules_chain->module->name);
+        log_debug("Module %s choosen for %s", hs->request.modules_chain->module->name, hs->request.url);
+        ret = Go_golang(hs, hs->request.modules_chain->module->name);
         break;
     case RUST:
         ret = -1;
         break;
     default:
-        log_error("Module type not supported: %d", conn_io->request.modules_chain->module->module_type);
+        log_error("Module type not supported: %d", hs->request.modules_chain->module->module_type);
     }
 
     if (ret < 0)
@@ -31,10 +31,10 @@ void module_cb(int fd, short event, void *arg)
         return;
     }
     // Check if writing was already done.
-    if (conn_io->request.modules_chain->next != NULL)
+    if (hs->request.modules_chain->next != NULL)
     {
-        conn_io->request.modules_chain = conn_io->request.modules_chain->next;
-        struct event *module_event = evtimer_new(conn_io->app_ctx->evbase, module_cb, conn_io);
+        hs->request.modules_chain = hs->request.modules_chain->next;
+        struct event *module_event = evtimer_new(hs->app_ctx->evbase, module_cb, hs);
         struct timeval half_sec = {0, 2000};
 
         if (evtimer_add(module_event, &half_sec) < 0)

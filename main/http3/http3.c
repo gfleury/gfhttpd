@@ -25,7 +25,7 @@ quiche_config *pquiche_config = NULL;
 
 quiche_h3_config *http3_config = NULL;
 
-void write_cb(struct http_stream *conn_io);
+void write_cb(struct http_stream *hs);
 
 void debug_log(const char *line, void *argp)
 {
@@ -67,8 +67,8 @@ int http3_init_config()
         return -1;
     }
 
-    quiche_config_load_cert_chain_from_pem_file(pquiche_config, "cert/example-com.cert.pem");
-    quiche_config_load_priv_key_from_pem_file(pquiche_config, "cert/example-com.key.pem");
+    quiche_config_load_cert_chain_from_pem_file(pquiche_config, config->cert_file);
+    quiche_config_load_priv_key_from_pem_file(pquiche_config, config->key_file);
 
     quiche_config_set_application_protos(pquiche_config,
                                          (uint8_t *)QUICHE_H3_APPLICATION_PROTOCOL,
@@ -98,7 +98,7 @@ int http3_init_config()
 struct future_write
 {
     struct event *fw_event;
-    struct http_stream *conn_io;
+    struct http_stream *hs;
     int64_t stream_id;
     int fd;
     int pos;
@@ -144,9 +144,9 @@ quiche_h3_header *get_http3_headers(headers *phdrs, unsigned int *length, char *
 void future_write_cb(const int sock, short int which, void *arg)
 {
     struct future_write *fw = arg;
-    struct http_stream *conn_io = fw->conn_io;
-    struct http3_params *http3_params = conn_io->http3_params;
-    // struct app_context *app_ctx = conn_io->app_ctx;
+    struct http_stream *hs = fw->hs;
+    struct http3_params *http3_params = hs->http3_params;
+    // struct app_context *app_ctx = hs->app_ctx;
     // struct connections *conns = app_ctx->conns;
     char buf[14515];
 
@@ -156,19 +156,20 @@ void future_write_cb(const int sock, short int which, void *arg)
         return;
     }
 
-    if (conn_io->response.headers_sent == false && conn_io->response.content_lenght != -1)
+    if (hs->response.headers_sent == false && hs->response.content_lenght != -1)
     {
         unsigned int n_headers;
-        quiche_h3_header *headers = get_http3_headers(conn_io->response.headers,
-                                                      &n_headers, conn_io->response.http_status, conn_io->response.content_lenght, buf);
+        quiche_h3_header *headers = get_http3_headers(hs->response.headers,
+                                                      &n_headers, hs->response.http_status, hs->response.content_lenght, buf);
 
         quiche_h3_send_response(http3_params->http3, http3_params->conn,
                                 fw->stream_id, headers, n_headers, false);
 
-        conn_io->response.headers_sent = true;
-        fw->len = conn_io->response.content_lenght;
+        hs->response.headers_sent = true;
+        fw->len = hs->response.content_lenght;
+        free(headers);
     }
-    else if (conn_io->response.headers_sent == false && conn_io->response.content_lenght == -1)
+    else if (hs->response.headers_sent == false && hs->response.content_lenght == -1)
     {
         struct timeval half_sec = {0, 2000};
         event_add(fw->fw_event, &half_sec);
@@ -200,7 +201,7 @@ void future_write_cb(const int sock, short int which, void *arg)
 
         fw->pos += written;
         left = left - n;
-        log_debug("%s %s Written %d read %d, left %d - EOF=%s.", conn_io->request.method, conn_io->request.url, written, n, left, fw->eof ? "true" : "false");
+        log_debug("%s %s Written %d read %d, left %d - EOF=%s.", hs->request.method, hs->request.url, written, n, left, fw->eof ? "true" : "false");
 
         if (written != n)
         {
@@ -211,50 +212,51 @@ void future_write_cb(const int sock, short int which, void *arg)
             break;
         }
     }
-    flush_egress(conn_io);
+    flush_egress(hs);
 
     if (fw->eof)
     {
         event_del(fw->fw_event);
         close(fd);
+        free(fw);
     }
 
     return;
 }
 
-static void set_timeout(struct http_stream *conn_io, int64_t q_tout)
+static void set_timeout(struct http_stream *hs, int64_t q_tout)
 {
     if (q_tout)
     {
         time_t tout = (q_tout + 999999) / 1000000;
 
-        conn_io->timer.tv_sec = (tout / 1000);
-        conn_io->timer.tv_usec = (unsigned int)(tout % 1000) * 1000;
+        hs->timer.tv_sec = (tout / 1000);
+        hs->timer.tv_usec = (unsigned int)(tout % 1000) * 1000;
 
         // Set the boundary to next second just in case
-        if (conn_io->timer.tv_usec >= 1000000)
+        if (hs->timer.tv_usec >= 1000000)
         {
-            conn_io->timer.tv_sec++;
-            conn_io->timer.tv_usec -= 1000000;
+            hs->timer.tv_sec++;
+            hs->timer.tv_usec -= 1000000;
         }
 
-        evtimer_add(conn_io->timeout_ev, &conn_io->timer);
+        evtimer_add(hs->timeout_ev, &hs->timer);
     }
 }
 
-int send_response(struct http_stream *conn_io, int64_t stream_id, int fd)
+int send_response(struct http_stream *hs, int64_t stream_id, int fd)
 {
-    //struct http3_params *http3_params = conn_io->http3_params;
+    //struct http3_params *http3_params = hs->http3_params;
 
     struct future_write *fw = calloc(1, sizeof(struct future_write));
     fw->fd = fd;
-    fw->conn_io = conn_io;
+    fw->hs = hs;
     fw->pos = 0;
     fw->stream_id = stream_id;
     fw->len = -1;
     fw->eof = false;
 
-    fw->fw_event = evtimer_new(conn_io->app_ctx->evbase, future_write_cb, fw);
+    fw->fw_event = evtimer_new(hs->app_ctx->evbase, future_write_cb, fw);
     struct timeval half_sec = {0, 1000};
     event_add(fw->fw_event, &half_sec);
     event_active(fw->fw_event, 0, 0);
@@ -263,10 +265,10 @@ int send_response(struct http_stream *conn_io, int64_t stream_id, int fd)
     return 0;
 }
 
-void flush_egress(struct http_stream *conn_io)
+void flush_egress(struct http_stream *hs)
 {
     static uint8_t out[MAX_DATAGRAM_SIZE];
-    struct http3_params *http3_params = conn_io->http3_params;
+    struct http3_params *http3_params = hs->http3_params;
 
     while (1)
     {
@@ -284,9 +286,9 @@ void flush_egress(struct http_stream *conn_io)
             return;
         }
 
-        ssize_t sent = sendto(conn_io->sock, out, written, 0,
-                              (struct sockaddr *)&conn_io->peer_addr,
-                              conn_io->peer_addr_len);
+        ssize_t sent = sendto(hs->sock, out, written, 0,
+                              (struct sockaddr *)&hs->peer_addr,
+                              hs->peer_addr_len);
         if (sent != written)
         {
             log_error("failed to send: %d", errno);
@@ -297,5 +299,42 @@ void flush_egress(struct http_stream *conn_io)
     }
 
     int64_t q_tout = quiche_conn_timeout_as_nanos(http3_params->conn);
-    set_timeout(conn_io, q_tout);
+    set_timeout(hs, q_tout);
+}
+
+void http3_cleanup(struct app_context *app_ctx)
+{
+    struct http_stream *hs, *tmp;
+    HASH_ITER(hh, app_ctx->conns->h, hs, tmp)
+    {
+        HASH_DELETE(hh, app_ctx->conns->h, hs);
+        http3_connection_cleanup(hs);
+    }
+
+    close(app_ctx->conns->sock);
+    free(app_ctx->conns);
+    quiche_h3_config_free(http3_config);
+    quiche_config_free(pquiche_config);
+}
+
+void http3_connection_cleanup(struct http_stream *hs)
+{
+    struct http3_params *http3_params = hs->http3_params;
+
+    evtimer_del(hs->timeout_ev);
+    event_free(hs->timeout_ev);
+
+    quiche_h3_conn_free(http3_params->http3);
+    quiche_conn_free(http3_params->conn);
+    free(http3_params);
+
+    free(hs->request.authority);
+    free(hs->request.method);
+    free(hs->request.url);
+    free(hs->request.scheme);
+    delete_header_all(hs->request.headers);
+    // delete_header_all(hs->response.headers);
+
+    log_debug("Freed the hell out of it.");
+    free(hs);
 }
