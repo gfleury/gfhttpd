@@ -254,3 +254,10 @@ exit:
     fclose(cfile);
     return r;
 }
+
+void config_free()
+{
+    delete_routes_all();
+    free(config);
+    config = NULL;
+}

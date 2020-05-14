@@ -11,6 +11,9 @@ cc_test(
         "-Imain/",
         "-Iexternal/uthash/src/",
     ],
+    data = [
+        "//:valgrind_suppress",
+    ],
     linkstatic = True,
     visibility = [
     ],

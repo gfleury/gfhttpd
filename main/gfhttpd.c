@@ -75,11 +75,11 @@ static void run()
 
   log_info("Logging initialized, starting gfhttpd-%s", GFHTTPD_VERSION);
 
-  // ssl_ctx = create_ssl_ctx(config->key_file, config->cert_file);
-  ssl_ctx = NULL;
+  ssl_ctx = create_ssl_ctx(config->key_file, config->cert_file);
+
   initialize_app_context(&app_ctx, ssl_ctx, evbase);
 
-  // http2_start_listen(evbase, config->listen_port, &app_ctx);
+  http2_start_listen(evbase, config->listen_port, &app_ctx);
   http3_start_listen(evbase, config->listen_port, &app_ctx);
 
   watchdog_event = evsignal_new(evbase, SIGINT, stop_cb, (void *)evbase);

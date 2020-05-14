@@ -12,6 +12,9 @@ cc_test(
         "-Imain/",
         "-Iexternal/uthash/src/",
     ],
+    data = [
+        "//:valgrind_suppress",
+    ],
     linkopts = select({
         "@bazel_tools//src/conditions:darwin": [
             "-framework Security",

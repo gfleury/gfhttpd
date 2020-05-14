@@ -28,6 +28,7 @@ struct modules_chain
 };
 
 int conf_load(int config_fd);
+void config_free();
 extern struct config *config;
 
 struct config_map

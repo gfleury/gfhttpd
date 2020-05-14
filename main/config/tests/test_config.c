@@ -27,7 +27,7 @@ int create_mock_conf(const char *c)
         printf("write failed");
         return (EXIT_FAILURE);
     }
-    printf("WRITTEN: %d\n", r);
+    // printf("WRITTEN: %d\n", r);
     close(fds[1]);
     return fds[0];
 }
@@ -76,6 +76,8 @@ int test_load_conf()
     assert(strncmp(rm.route->modules_chain->module->name, "go_example", sizeof("go_example")) == 0);
 
     assert(strncmp(rm.route->modules_chain->next->module->name, "unexistent_modu", sizeof("unexistent_modu")) == 0);
+    config_free();
+
     return (EXIT_SUCCESS);
 }
 
@@ -97,6 +99,7 @@ int test_load_broken_conf()
     r = conf_load(fconf);
     close(fconf);
     assert(r < 0);
+    config_free();
 
     return (EXIT_SUCCESS);
 }
@@ -117,6 +120,7 @@ int test_load_missing_item_conf()
     r = conf_load(fconf);
     close(fconf);
     assert(r < 0);
+    config_free();
 
     return (EXIT_SUCCESS);
 }

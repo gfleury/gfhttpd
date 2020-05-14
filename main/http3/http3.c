@@ -32,11 +32,21 @@ void debug_log(const char *line, void *argp)
     log_debug("%s", line);
 }
 
-int http3_init_sock(struct addrinfo *local)
+int http3_init_sock(char *ip, int port)
 {
+    struct sockaddr_in6 sin6;
+
+#ifdef SIN6_LEN
+    sin6.sin6_len = sizeof(sin6);
+#endif
+    sin6.sin6_family = AF_INET6;
+    sin6.sin6_flowinfo = 0;
+    sin6.sin6_port = htons(port);
+    sin6.sin6_addr = in6addr_any;
+
     quiche_enable_debug_logging(debug_log, NULL);
 
-    int sock = socket(local->ai_family, SOCK_DGRAM, 0);
+    int sock = socket(sin6.sin6_family, SOCK_DGRAM, 0);
     if (sock < 0)
     {
         perror("failed to create socket");
@@ -49,7 +59,7 @@ int http3_init_sock(struct addrinfo *local)
         return -1;
     }
 
-    if (bind(sock, local->ai_addr, local->ai_addrlen) < 0)
+    if (bind(sock, (struct sockaddr *)&sin6, sizeof(sin6)) < 0)
     {
         perror("failed to connect socket");
         return -1;

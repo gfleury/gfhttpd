@@ -24,5 +24,5 @@ void http2_writecb(struct bufferevent *bev, void *ptr);
 
 void http2_eventcb(struct bufferevent *bev, short events, void *ptr);
 
-void http2_start_listen(struct event_base *evbase, const char *service,
-                        app_context *app_ctx);
+int http2_start_listen(struct event_base *evbase, const char *service,
+                       app_context *app_ctx);

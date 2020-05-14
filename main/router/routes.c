@@ -100,7 +100,7 @@ int match_route(char *s, struct route_match *rm)
                 int idx = ret - 1;
                 PCRE2_SPTR substring_start = subject + ovector[2 * idx];
                 PCRE2_SIZE substring_length = ovector[2 * idx + 1] - ovector[2 * idx];
-                log_debug("Found remaining substring - %2d: %.*s\n", ret, (int)substring_length, (char *)substring_start);
+                log_debug("Found remaining substring - %2d: %.*s", ret, (int)substring_length, (char *)substring_start);
 
                 // Exact match, no second part on path
                 if (idx == 0)
@@ -121,6 +121,7 @@ int match_route(char *s, struct route_match *rm)
                 rm->stripped_path = s;
             }
             ret = 0;
+            pcre2_match_data_free(match_data);
             break;
         }
     }
@@ -203,6 +204,23 @@ void delete_routes_all()
     HASH_ITER(hh, routes, current, tmp)
     {
         HASH_DEL(routes, current); /* delete; users advances to next */
+        for (struct modules_chain *mc = current->modules_chain; mc;)
+        {
+            struct modules_chain *previous = NULL;
+            if (mc->module)
+            {
+                free(mc->module);
+                mc->module = NULL;
+            }
+            previous = mc;
+            mc = mc->next;
+            free(previous);
+            previous = NULL;
+        }
+        current->modules_chain = NULL;
+
+        pcre2_code_free(current->re);
+        free(current->path);
         free(current);
     }
 }

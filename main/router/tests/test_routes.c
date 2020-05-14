@@ -12,22 +12,20 @@ int main(int argc, char *argv[])
     int len = length_routes();
     assert(len == 0);
 
-    struct module m = {
-        .name = "example_mod",
-        .module_type = GOLANG,
-    };
+    struct module *m = calloc(1, sizeof(struct module));
+    snprintf(m->name, sizeof(m->name), "example_mod");
+    m->module_type = GOLANG;
 
-    struct modules_chain m_chain = {
-        .module = &m,
-        .next = NULL,
-    };
+    struct modules_chain *m_chain = calloc(1, sizeof(struct modules_chain));
+    m_chain->module = m;
+    m_chain->next = NULL;
 
     struct route_match rm = {
         NULL,
         NULL,
     };
 
-    struct route *r = insert_route("/first_level", strlen("/first_level"), &m_chain, false);
+    struct route *r = insert_route(strdup("/first_level"), strlen("/first_level"), m_chain, false);
     assert(r != NULL);
 
     ret = get_route("/first_level", &rm);
@@ -35,7 +33,14 @@ int main(int argc, char *argv[])
     assert(rm.route == r);
     assert(strncmp(rm.stripped_path, "/", sizeof("/")) == 0);
 
-    struct route *r2 = insert_route("^/second_level/(.*)", strlen("^/second_level/(.*)"), &m_chain, true);
+    m = calloc(1, sizeof(struct module));
+    snprintf(m->name, sizeof(m->name), "example_mod");
+    m->module_type = GOLANG;
+    m_chain = calloc(1, sizeof(struct modules_chain));
+    m_chain->module = m;
+    m_chain->next = NULL;
+
+    struct route *r2 = insert_route(strdup("^/second_level/(.*)"), strlen("^/second_level/(.*)"), m_chain, true);
     assert(r2 != NULL);
 
     // Try get specific route
@@ -58,8 +63,15 @@ int main(int argc, char *argv[])
     ret = match_route("/do_not_Exists/test_regex", &rm);
     assert(ret == -1);
 
+    m = calloc(1, sizeof(struct module));
+    snprintf(m->name, sizeof(m->name), "example_mod");
+    m->module_type = GOLANG;
+    m_chain = calloc(1, sizeof(struct modules_chain));
+    m_chain->module = m;
+    m_chain->next = NULL;
+
     // ^/phpmyadmin(?:/(.*))?$
-    struct route *r3 = insert_route("^/phpmyadmin(?:/(.*))?$", strlen("^/phpmyadmin(?:/(.*))?$"), &m_chain, true);
+    struct route *r3 = insert_route(strdup("^/phpmyadmin(?:/(.*))?$"), strlen("^/phpmyadmin(?:/(.*))?$"), m_chain, true);
     assert(r3 != NULL);
 
     ret = match_route("/phpmyadmin/whateverhappensthisshoudbetheonlyrest", &rm);
@@ -105,7 +117,14 @@ int main(int argc, char *argv[])
     assert(r3 == rm.route);
     assert(strncmp(rm.stripped_path, "/../", sizeof("/../")) == 0);
 
-    struct route *r4 = insert_route("^/no_slash_level(.*)", strlen("^/no_slash_level(.*)"), &m_chain, true);
+    m = calloc(1, sizeof(struct module));
+    snprintf(m->name, sizeof(m->name), "example_mod");
+    m->module_type = GOLANG;
+    m_chain = calloc(1, sizeof(struct modules_chain));
+    m_chain->module = m;
+    m_chain->next = NULL;
+
+    struct route *r4 = insert_route(strdup("^/no_slash_level(.*)"), strlen("^/no_slash_level(.*)"), m_chain, true);
     assert(r4 != NULL);
 
     ret = match_route("/no_slash_level/here/", &rm);
@@ -118,6 +137,7 @@ int main(int argc, char *argv[])
     assert(r4 == rm.route);
     assert(strncmp(rm.stripped_path, "/no_slash_level_something_else/here/", sizeof("/no_slash_level_something_else/here/")) == 0);
 
+    delete_routes_all();
     // OK
     exit(EXIT_SUCCESS);
 }

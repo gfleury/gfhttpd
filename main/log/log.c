@@ -103,6 +103,7 @@ void destroy_log(struct log *plog)
 
 void log_log(int level, const char *at, const char *fmt, ...)
 {
+
     va_list args;
     char buf[16];
     int fd_printer;
@@ -110,6 +111,11 @@ void log_log(int level, const char *at, const char *fmt, ...)
     if (lplog == NULL)
     {
         fd_printer = fileno(stdout);
+        va_start(args, fmt);
+        vdprintf(fd_printer, fmt, args);
+        va_end(args);
+        dprintf(fd_printer, "\n");
+        return;
     }
     else if (level < lplog->level)
     {
@@ -123,7 +129,15 @@ void log_log(int level, const char *at, const char *fmt, ...)
     time_t t = time(NULL);
     struct tm *lt = localtime(&t);
 
-    buf[strftime(buf, sizeof(buf), "%H:%M:%S", lt)] = '\0';
+    if (lt != NULL)
+    {
+        buf[strftime(buf, sizeof(buf), "%H:%M:%S", lt)] = '\0';
+    }
+    else
+    {
+        buf[0] = '\0';
+    }
+
     dprintf(fd_printer, "%s %-5s %s: ", buf, level_names[level], at);
     va_start(args, fmt);
     vdprintf(fd_printer, fmt, args);
