@@ -1,17 +1,22 @@
 dist: bionic
-
 language: c
-
 services:
   - docker
-
 before_install:
+  - sed -ie "s/github.com/gfleury:$GITHUB_TOKEN@github.com/g" github_wiki.bzl
   - docker build -t gfleury/bazel-ubuntu-build -f Dockerfile.build .
-  - docker run -dt --rm --name bazel-ubuntu-build -v $PWD:/app -w /app --entrypoint /bin/cat gfleury/bazel-ubuntu-build
+  - docker run -dt --rm --name bazel-ubuntu-build -v $PWD:/app -w /app --entrypoint
+    /bin/cat gfleury/bazel-ubuntu-build
   - docker ps -a
-
 script:
   - docker exec -it bazel-ubuntu-build bash -c "./valgrind.sh"
-  - docker exec -it bazel-ubuntu-build bash -c "bazel test \$(bazel query 'kind(\".*test\", //main/...)') --test_output=errors --verbose_failures --sandbox_debug -c dbg"
-  - docker exec -it bazel-ubuntu-build bash -c "bazel test \$(bazel query 'kind(\".*test\", //modules/...)') --test_output=errors --verbose_failures --sandbox_debug -c dbg"
-  - docker exec -it bazel-ubuntu-build bash -c "bazel build //main:gfhttpd --verbose_failures --sandbox_debug -c dbg"
+  - docker exec -it bazel-ubuntu-build bash -c "bazel build //:publish_tests_logs --verbose_failures --sandbox_debug -c dbg --test_output=all"
+  - docker exec -it bazel-ubuntu-build bash -c "bazel test \$(bazel query 'kind(\".*test\",
+    //main/...)') --test_output=errors --verbose_failures --sandbox_debug -c dbg"
+  - docker exec -it bazel-ubuntu-build bash -c "bazel test \$(bazel query 'kind(\".*test\",
+    //modules/...)') --test_output=errors --verbose_failures --sandbox_debug -c dbg"
+  - docker exec -it bazel-ubuntu-build bash -c "bazel build //main:gfhttpd --verbose_failures
+    --sandbox_debug -c dbg"
+env:
+  global:
+    secure: DMyB9Gx1JJUUZ3k8zaujythcAUxoqjCSVjh02yJ/l49435TwCfLkr+HaxfL50K8MBR6uKE2t1jJqaRW2Qe8pQf0Tr1gCtosFQ0rhA6FsyakG17AgD5YY0YbRHfO2DkCHrjtYW+VS1dA44Fc1L/vzaTPbQLdaDP07oLTr5y3w3TzGd8ZwnG5Mn24tI5YWKBLfIjyJdPgbW4K8BvwJnCrGcIj1t43fnP5NsR6i5CvkqulhSYPN82OEAgI0m0+blYaF+KTf6xRo/XBAvTxao+KOMX1A2dZIboBvelLGtSf5cwUr6geva/xuEy2FYZRZHPz87/5+8YMX8c/e4rJyTqPrC7faDizmh1mr7wdRsQ/mcItqP8oEV6OW1wQv/tk7/ifHwTecMzwLDxWmNLjeO9/6licCLV9IGYnwx99udlU+9ikL8l+s5figK13nXA8xEAwvLYsSvLlSVEyQMIhk2oIU1WXNlxgiM29sE+tKLK3M9p9x0Q8+UfWwnc/eWZ0Co2ne7R0UaTlCmb7zx7Mawtr63TM86IbS3nv4Lrg+T8UkOMNXz/uRpdaEyccyIWG3oRun6fN8kD5+JBXeIeXdifcTauHd2CsgCIntVdFcmJIv3eF/eVE7gRUyJl1k/eNKZS9voTFIFVE0vPDBP4ogfZaMT1a8CV+7Oy9WAVL8K4HHwBM=

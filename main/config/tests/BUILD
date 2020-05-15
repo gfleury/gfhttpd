@@ -26,6 +26,7 @@ cc_test(
     }),
     linkstatic = True,
     visibility = [
+        "//:__pkg__",
     ],
     deps = [
         "//main/config",
