@@ -31,7 +31,8 @@ def _github_wiki_impl(ctx):
             inputs = output,
             outputs = [clonedir],
             progress_message = "Commiting the changes on %s" % clonedir.short_path,
-            command = "git clone {} {} && ".format(ctx.attr.clone_url, clonedir.path) +
+            command = "export HOME=\"$PWD\" && git config --global user.email \"{}\" && git config --global user.name \"{}\" &&".format(ctx.attr.git_email, ctx.attr.git_name) +
+                      "git clone {} {} && ".format(ctx.attr.clone_url, clonedir.path) +
                       "cp -rf {}/* {} && ".format(output[0].dirname, clonedir.path) +
                       "cd {} && ".format(clonedir.path) +
                       "git add * && git commit -a -m '\''Commit msg'\'' && git push || true",
@@ -57,6 +58,12 @@ github_wiki = rule(
         ),
         "deps": attr.label_list(
             default = [],
+        ),
+        "git_name": attr.string(
+            default = "Wiki",
+        ),
+        "git_email": attr.string(
+            default = "root@localhost",
         ),
     },
     outputs = {"clonedir": "%{name}-wiki"},
