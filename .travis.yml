@@ -3,7 +3,7 @@ language: c
 services:
   - docker
 before_install:
-  - sed -ie "s/github.com/gfleury:$GITHUB_TOKEN@githubx.com/g" github_wiki.bzl
+  - sed -ie "s/github.com/gfleury:$GITHUB_TOKEN@github.com/g" BUILD
   - docker build -t gfleury/bazel-ubuntu-build -f Dockerfile.build .
   - docker run -dt --rm --name bazel-ubuntu-build -v $PWD:/app -w /app --entrypoint
     /bin/cat gfleury/bazel-ubuntu-build
