@@ -38,11 +38,12 @@
 #include <event2/listener.h>
 
 static void initialize_app_context(app_context *app_ctx, SSL_CTX *ssl_ctx,
-                                   struct event_base *evbase)
+                                   struct event_base *evbase, struct config *config)
 {
   memset(app_ctx, 0, sizeof(app_context));
   app_ctx->ssl_ctx = ssl_ctx;
   app_ctx->evbase = evbase;
+  app_ctx->config = config;
 }
 
 /* Here's a callback function that calls loopbreak */
@@ -56,7 +57,7 @@ static void stop_cb(evutil_socket_t sig, short events, void *arg)
   event_base_loopexit(evbase, &two_sec);
 }
 
-static void run()
+static void run(struct config *config)
 {
   SSL_CTX *ssl_ctx;
   app_context app_ctx;
@@ -77,7 +78,7 @@ static void run()
 
   ssl_ctx = create_ssl_ctx(config->key_file, config->cert_file);
 
-  initialize_app_context(&app_ctx, ssl_ctx, evbase);
+  initialize_app_context(&app_ctx, ssl_ctx, evbase, config);
 
   http2_start_listen(evbase, config->listen_port, &app_ctx);
   http3_start_listen(evbase, config->listen_port, &app_ctx);
@@ -107,6 +108,7 @@ int main(int argc, char **argv)
   struct sigaction act;
   char *config_file = "etc/conf.json";
   int opt, fconf;
+  struct config config = {.routes = NULL};
 
   // put ':' in the starting of the
   // string so that program can
@@ -146,7 +148,7 @@ int main(int argc, char **argv)
     return (EXIT_FAILURE);
   }
 
-  if (conf_load(fconf) < 0)
+  if (conf_load(fconf, &config) < 0)
   {
     printf("Failed to load %s configuration file. errno: %d\n", config_file, errno);
     return (EXIT_FAILURE);
@@ -159,6 +161,6 @@ int main(int argc, char **argv)
   SSL_load_error_strings();
   SSL_library_init();
 
-  run();
+  run(&config);
   return (EXIT_SUCCESS);
 }

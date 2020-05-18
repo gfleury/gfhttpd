@@ -7,6 +7,7 @@ cc_library(
     copts = [
         "-Werror",
         "-Iexternal/uthash/src/",
+        "-Imain/",
     ],
     # linkstatic = True,
     visibility = [
@@ -18,6 +19,7 @@ cc_library(
     ],
     deps = [
         "//main/config:config_headers",
+        "//main/mem",
         "@uthash//:uthash_lib",
     ],
 )

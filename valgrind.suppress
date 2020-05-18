@@ -2,17 +2,41 @@
    ignore_unversioned_libs
    Memcheck:Leak
    ...
-   obj:*/lib*/lib*.dylib
+   obj:/usr/lib/system/libsystem_c.dylib
+}
+{
+   ignore_unversioned_libs
+   Memcheck:Leak
+   ...
+   obj:/usr/lib/system/libxpc.dylib
+}
+{
+   ignore_unversioned_libs
+   Memcheck:Leak
+   ...
+   obj:/usr/lib/system/libsystem_info.dylib
+}
+{
+   ignore_unversioned_libs
+   Memcheck:Leak
+   ...
+   obj:/System/Library/Frameworks/*
+}
+{
+   ignore_unversioned_libs
+   Memcheck:Leak
+   ...
+   obj:/usr/lib/libSystem.B.dylib
+}
+{
+   ignore_unversioned_libs
+   Memcheck:Leak
+   ...
+   obj:/usr/lib/system/libsystem_notify.dylib
 }
 {
    ignore_versioned_libs
    Memcheck:Leak
    ...
-   obj:*/lib*/lib*.dylib.*
-}
-{
-   ignore_versioned_libs
-   Memcheck:Leak
-   ...
-   obj:/usr/lib/dyl*
+   obj:/usr/lib/dyld
 }

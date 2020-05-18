@@ -3,11 +3,15 @@
 
 #include <stdbool.h>
 
+#include "mem/mem.h"
+
 struct config
 {
     char listen_port[8];
     char cert_file[256];
     char key_file[256];
+    struct route *routes;
+    mem_pool mp;
 };
 
 struct module
@@ -27,9 +31,8 @@ struct modules_chain
     struct modules_chain *next;
 };
 
-int conf_load(int config_fd);
-void config_free();
-extern struct config *config;
+int conf_load(int config_fd, struct config *config);
+void config_free(struct config *config);
 
 struct config_map
 {
@@ -37,7 +40,7 @@ struct config_map
     char *dest;
     int n_dest; /* dest lenght */
     bool required;
-    int (*array_parser_ptr)(const char *, int);
+    int (*array_parser_ptr)(struct config *c, const char *, int);
 };
 
 #endif

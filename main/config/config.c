@@ -8,10 +8,6 @@
 #include "config.h"
 #include "config_internal.h"
 
-#include "router/routes.h"
-
-struct config *config = NULL;
-
 static int jsoneq(const char *json, jsmntok_t *tok, const char *s)
 {
     if ((tok->type == JSMN_STRING || tok->type == JSMN_PRIMITIVE) && (int)strlen(s) == tok->end - tok->start &&
@@ -26,7 +22,7 @@ static int jsoneq(const char *json, jsmntok_t *tok, const char *s)
  * Returns positive number of processed tokens, 0 if the token does not means anything and -1 if 
  * failed during token processing.
 */
-static int json_contains(const char *json, int i, struct config_map *config_map)
+static int json_contains(struct config *config, const char *json, int i, struct config_map *config_map)
 {
     jsmntok_t *tok = &t[i];
     if (tok->type == JSMN_PRIMITIVE && (int)strlen(config_map->token_name) == tok->end - tok->start &&
@@ -40,13 +36,13 @@ static int json_contains(const char *json, int i, struct config_map *config_map)
         }
         else if (config_map->array_parser_ptr != NULL)
         {
-            return config_map->array_parser_ptr(json, i);
+            return config_map->array_parser_ptr(config, json, i);
         }
     }
     return 0;
 }
 
-static int locations_parser(const char *json, int i)
+static int locations_parser(struct config *config, const char *json, int i)
 {
     int j;
     jsmntok_t *locations = &t[i + 1];
@@ -92,13 +88,13 @@ static int locations_parser(const char *json, int i)
                     for (int m_idx = 0; m_idx < loc_keys->size; m_idx++)
                     {
                         jsmntok_t *modules_keys = loc_keys + 1 + m_idx;
-                        struct modules_chain *m_chain = calloc(1, sizeof(struct modules_chain));
+                        struct modules_chain *m_chain = mp_calloc(config->mp, 1, sizeof(struct modules_chain));
                         if (first == NULL)
                         {
                             first = m_chain;
                         }
 
-                        m_chain->module = calloc(1, sizeof(struct module));
+                        m_chain->module = mp_calloc(config->mp, 1, sizeof(struct module));
 
                         m_chain->module->module_type = GOLANG;
                         snprintf(m_chain->module->name, sizeof(m_chain->module->name), "%.*s",
@@ -127,7 +123,7 @@ static int locations_parser(const char *json, int i)
                 }
                 return (-1);
             }
-            insert_route(r.path, r.n_path, r.modules_chain, true);
+            insert_route(&config->routes, config->mp, r.path, r.n_path, r.modules_chain, true);
         }
         else
         {
@@ -139,21 +135,16 @@ static int locations_parser(const char *json, int i)
     return i;
 }
 
-int conf_load(int config_fd)
+int conf_load(int config_fd, struct config *config)
 {
     char buf[BUFSIZ];
     jsmntok_t *ptok = NULL;
     int tokcount = 0, r = 0;
     FILE *cfile = fdopen(config_fd, "r");
 
-    if (cfile == NULL)
+    if (cfile == NULL || config == NULL)
     {
         return -1;
-    }
-
-    if (config == NULL)
-    {
-        config = calloc(1, sizeof(struct config));
     }
 
     struct config_map config_map[] = {
@@ -226,7 +217,7 @@ int conf_load(int config_fd)
             bool found = false;
             for (int i = 1; i < r; i++)
             {
-                int next_token = json_contains(buf, i, &config_map[n]);
+                int next_token = json_contains(config, buf, i, &config_map[n]);
                 if (next_token > 0)
                 {
                     log_debug("Setting %s with %.*s", config_map[n].token_name, t[i + 1].end - t[i + 1].start, buf + t[i + 1].start);
@@ -255,9 +246,11 @@ exit:
     return r;
 }
 
-void config_free()
+void config_free(struct config *config)
 {
-    delete_routes_all();
-    free(config);
-    config = NULL;
+    delete_routes_all(&config->routes);
+    if (config->mp)
+    {
+        mp_delete(&config->mp, true);
+    }
 }

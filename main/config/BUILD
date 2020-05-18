@@ -29,11 +29,14 @@ cc_library(
         "//main/config/tests:__pkg__",
         "//main/http2:__pkg__",
         "//main/http3:__pkg__",
+        "//main/router:__pkg__",
         "//modules:__pkg__",
     ],
     deps = [
+        "//lib:pcre2",
         "//main/log",
-        "//main/router",
+        "//main/mem",
         "@jsmn//:jsmn_lib",
+        "@uthash//:uthash_lib",
     ],
 )

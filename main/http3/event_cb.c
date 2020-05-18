@@ -368,9 +368,9 @@ void http3_event_cb(const int sock, short int which, void *arg)
                     }
 
                     // Init Response
-                    HASH_ADD_KEYPTR(hh, hs->response.headers, server_status.name, server_status.n_name, &server_status);
-                    insert_header(hs->response.headers, server_header.name, server_header.n_name, server_header.value, server_header.n_value);
-                    insert_header(hs->response.headers, "content-length", sizeof("content-length") - 1, "5", sizeof("5") - 1);
+                    insert_header(&hs->response.headers, server_status.name, server_status.n_name, server_status.value, server_status.n_value);
+                    insert_header(&hs->response.headers, server_header.name, server_header.n_name, server_header.value, server_header.n_value);
+                    insert_header(&hs->response.headers, "content-length", sizeof("content-length") - 1, "5", sizeof("5") - 1);
 
                     hs->response.content_lenght = -1;
 

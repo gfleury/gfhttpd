@@ -5,7 +5,6 @@ cc_library(
     srcs = [
         "module_cb.c",
         "router.c",
-        "routes.c",
     ],
     hdrs = glob(["*.h"]),
     copts = [
@@ -26,11 +25,9 @@ cc_library(
     deps = [
         "//main/http_stream",
         "//main/log",
-        "//main/config:config_headers",
+        "//main/config",
         "//modules",
-        "//lib:pcre2",
         # "//modules/golang:headers",
         "@boringssl//:ssl",
-        "@uthash//:uthash_lib",
     ],
 )

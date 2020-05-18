@@ -1,10 +1,8 @@
-#include "config/config.h"
+#include "config.h"
 
 #include "routes.h"
 
 #include "log/log.h"
-
-struct route *routes = NULL;
 
 static char *ROOT = "/";
 
@@ -34,7 +32,7 @@ pcre2_code *parse_regex(PCRE2_SPTR pattern)
     return re;
 }
 
-int match_route(char *s, struct route_match *rm)
+int match_route(struct route **routes, char *s, struct route_match *rm)
 {
     PCRE2_SPTR subject = (PCRE2_SPTR)s;
     PCRE2_SIZE subject_length;
@@ -47,7 +45,7 @@ int match_route(char *s, struct route_match *rm)
     }
     subject_length = (PCRE2_SIZE)strlen(s);
 
-    HASH_ITER(hh, routes, r, tmp)
+    HASH_ITER(hh, *routes, r, tmp)
     {
         if (!r->re)
         {
@@ -129,7 +127,7 @@ int match_route(char *s, struct route_match *rm)
     return ret;
 }
 
-struct route *insert_route(char *path, int n_path, struct modules_chain *m, bool regex)
+struct route *insert_route(struct route **routes, mem_pool mp, char *path, int n_path, struct modules_chain *m, bool regex)
 {
     struct route *r = NULL;
 
@@ -146,12 +144,12 @@ struct route *insert_route(char *path, int n_path, struct modules_chain *m, bool
         r->re = parse_regex((PCRE2_SPTR)path);
     }
 
-    HASH_ADD_KEYPTR(hh, routes, r->path, r->n_path, r);
+    HASH_ADD_KEYPTR(hh, *routes, r->path, r->n_path, r);
 
     return r;
 }
 
-struct route *create_route(char *path, int n_path, struct modules_chain *m, bool regex)
+struct route *create_route(struct route **routes, char *path, int n_path, struct modules_chain *m, bool regex)
 {
     struct route *r = NULL;
 
@@ -169,15 +167,15 @@ struct route *create_route(char *path, int n_path, struct modules_chain *m, bool
     return r;
 }
 
-void add_route(struct route *r)
+void add_route(struct route **routes, mem_pool mp, struct route *r)
 {
-    HASH_ADD_KEYPTR(hh, routes, r->path, r->n_path, r);
+    HASH_ADD_KEYPTR(hh, *routes, r->path, r->n_path, r);
 }
 
-int get_route(char *path, struct route_match *rm)
+int get_route(struct route **routes, char *path, struct route_match *rm)
 {
     struct route *r;
-    HASH_FIND_STR(routes, path, r);
+    HASH_FIND_STR(*routes, path, r);
     if (r != NULL)
     {
         rm->route = r;
@@ -191,30 +189,30 @@ int get_route(char *path, struct route_match *rm)
     return 0;
 }
 
-void delete_route(struct route *r)
+void delete_route(struct route **routes, struct route *r)
 {
-    HASH_DEL(routes, r);
+    HASH_DEL(*routes, r);
     free(r);
 }
 
-void delete_routes_all()
+void delete_routes_all(struct route **routes)
 {
     struct route *current, *tmp;
 
-    HASH_ITER(hh, routes, current, tmp)
+    HASH_ITER(hh, *routes, current, tmp)
     {
-        HASH_DEL(routes, current); /* delete; users advances to next */
+        HASH_DEL(*routes, current); /* delete; users advances to next */
         for (struct modules_chain *mc = current->modules_chain; mc;)
         {
             struct modules_chain *previous = NULL;
             if (mc->module)
             {
-                free(mc->module);
+                // free(mc->module);
                 mc->module = NULL;
             }
             previous = mc;
             mc = mc->next;
-            free(previous);
+            // free(previous);
             previous = NULL;
         }
         current->modules_chain = NULL;
@@ -225,7 +223,7 @@ void delete_routes_all()
     }
 }
 
-unsigned int length_routes()
+unsigned int length_routes(struct route **routes)
 {
-    return HASH_COUNT(routes);
+    return HASH_COUNT(*routes);
 }

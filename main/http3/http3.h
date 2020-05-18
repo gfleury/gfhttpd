@@ -29,8 +29,8 @@ void flush_egress(struct http_stream *hs);
 #endif
 
 void http3_event_cb(const int sock, short int which, void *arg);
-int http3_init_sock(char *ip, int port);
-int http3_init_config();
+int http3_init_config(struct config *config);
+int http3_init_sock(struct config *config);
 int http3_start_listen(struct event_base *evbase, const char *service,
                        app_context *app_ctx);
 void http3_cleanup(struct app_context *app_ctx);

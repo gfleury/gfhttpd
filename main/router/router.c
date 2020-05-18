@@ -6,7 +6,7 @@
 
 #include "http_stream/http_stream.h"
 
-#include "routes.h"
+#include "config/routes.h"
 
 #include "log/log.h"
 
@@ -112,10 +112,10 @@ int root_router(struct event_base *loop, struct http_stream *hs)
     rel_path = request_path;
 
     // Try get specific route
-    if (get_route(rel_path, &rm) == -1)
+    if (get_route(&hs->routes, rel_path, &rm) == -1)
     {
         // Try to get route by regex
-        match_route(rel_path, &rm);
+        match_route(&hs->routes, rel_path, &rm);
     }
 
     route = rm.route;

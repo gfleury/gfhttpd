@@ -124,7 +124,7 @@ configure_make(
     ],
     visibility = [
         "//main:__pkg__",
-        "//main/router:__pkg__",
+        "//main/config:__pkg__",
     ],
     deps = [
     ],

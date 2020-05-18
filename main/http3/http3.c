@@ -32,7 +32,7 @@ void debug_log(const char *line, void *argp)
     log_debug("%s", line);
 }
 
-int http3_init_sock(char *ip, int port)
+int http3_init_sock(struct config *config)
 {
     struct sockaddr_in6 sin6;
 
@@ -41,7 +41,7 @@ int http3_init_sock(char *ip, int port)
 #endif
     sin6.sin6_family = AF_INET6;
     sin6.sin6_flowinfo = 0;
-    sin6.sin6_port = htons(port);
+    sin6.sin6_port = htons(atoi(config->listen_port));
     sin6.sin6_addr = in6addr_any;
 
     quiche_enable_debug_logging(debug_log, NULL);
@@ -67,7 +67,7 @@ int http3_init_sock(char *ip, int port)
     return sock;
 }
 
-int http3_init_config()
+int http3_init_config(struct config *config)
 {
 
     pquiche_config = quiche_config_new(QUICHE_PROTOCOL_VERSION);
@@ -118,7 +118,7 @@ struct future_write
 
 quiche_h3_header *get_http3_headers(headers *phdrs, unsigned int *length, char *http_status, size_t len, char *buf)
 {
-    *length = length_header(phdrs);
+    *length = length_header(&phdrs);
     headers *current, *tmp;
     int idx = 0;
     quiche_h3_header *h3_hdrs = calloc(*length, sizeof(quiche_h3_header));
@@ -342,7 +342,7 @@ void http3_connection_cleanup(struct http_stream *hs)
     free(hs->request.method);
     free(hs->request.url);
     free(hs->request.scheme);
-    delete_header_all(hs->request.headers);
+    delete_header_all(&hs->request.headers);
     // delete_header_all(hs->response.headers);
 
     log_debug("Freed the hell out of it.");

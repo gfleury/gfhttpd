@@ -35,14 +35,14 @@
 int http3_start_listen(struct event_base *evbase, const char *service,
                        app_context *app_ctx)
 {
-  int sock = http3_init_sock(NULL, atoi(service));
+  int sock = http3_init_sock(app_ctx->config);
   if (sock < 0)
   {
     log_error("failed to run init_sock(), errno: %d", errno);
     return 1;
   }
 
-  if (http3_init_config() < 0)
+  if (http3_init_config(app_ctx->config) < 0)
   {
     log_error("failed to run init_http3_config(), errno: %d", errno);
     return 1;
@@ -72,5 +72,5 @@ int http3_start_listen(struct event_base *evbase, const char *service,
     return 1;
   }
 
-    return 0;
+  return 0;
 }

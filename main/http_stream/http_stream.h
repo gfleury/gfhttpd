@@ -18,6 +18,7 @@ typedef struct app_context
     SSL_CTX *ssl_ctx;
     struct event_base *evbase;
     struct connections *conns;
+    struct config *config;
 } app_context;
 
 typedef struct http_request
@@ -46,6 +47,7 @@ struct http_stream
 {
     struct event *timeout_ev;
     struct timeval timer;
+    struct route *routes;
 
     int sock;
     struct app_context *app_ctx;
