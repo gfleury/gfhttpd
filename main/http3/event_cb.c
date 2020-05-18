@@ -64,9 +64,10 @@ static bool validate_token(const uint8_t *token, size_t token_len,
 
 static struct http_stream *create_conn(struct app_context *app_ctx, uint8_t *odcid, size_t odcid_len)
 {
-    struct http3_params *http3_params = calloc(1, sizeof(struct http3_params));
     mem_pool mp = mp_new(16 * 1024);
+    assert(mp);
 
+    struct http3_params *http3_params = mp_calloc(mp, 1, sizeof(struct http3_params));
     struct http_stream *hs = mp_calloc(mp, 1, sizeof(*hs));
     assert(hs);
     hs->mp = mp;

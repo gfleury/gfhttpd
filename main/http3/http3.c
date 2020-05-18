@@ -116,12 +116,12 @@ struct future_write
     bool eof;
 };
 
-quiche_h3_header *get_http3_headers(headers *phdrs, unsigned int *length, char *http_status, size_t len, char *buf)
+quiche_h3_header *get_http3_headers(headers *phdrs, mem_pool mp, unsigned int *length, char *http_status, size_t len, char *buf)
 {
     *length = length_header(&phdrs);
     headers *current, *tmp;
     int idx = 0;
-    quiche_h3_header *h3_hdrs = calloc(*length, sizeof(quiche_h3_header));
+    quiche_h3_header *h3_hdrs = mp_calloc(mp, *length, sizeof(quiche_h3_header));
 
     HASH_ITER(hh, phdrs, current, tmp)
     {
@@ -169,7 +169,7 @@ void future_write_cb(const int sock, short int which, void *arg)
     if (hs->response.headers_sent == false && hs->response.content_lenght != -1)
     {
         unsigned int n_headers;
-        quiche_h3_header *headers = get_http3_headers(hs->response.headers,
+        quiche_h3_header *headers = get_http3_headers(hs->response.headers, hs->mp,
                                                       &n_headers, hs->response.http_status, hs->response.content_lenght, buf);
 
         quiche_h3_send_response(http3_params->http3, http3_params->conn,
@@ -258,7 +258,7 @@ int send_response(struct http_stream *hs, int64_t stream_id, int fd)
 {
     //struct http3_params *http3_params = hs->http3_params;
 
-    struct future_write *fw = calloc(1, sizeof(struct future_write));
+    struct future_write *fw = mp_calloc(hs->mp, 1, sizeof(struct future_write));
     fw->fd = fd;
     fw->hs = hs;
     fw->pos = 0;
