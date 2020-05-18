@@ -257,11 +257,11 @@ static int on_header_callback(nghttp2_session *session,
                 ;
             stream_data->request.scheme = percent_decode(value, j);
         }
-        else
-        {
-            headers *h = create_header(strndup((char *)name, namelen), namelen, strndup((char *)value, valuelen), valuelen, true);
-            HASH_ADD_KEYPTR(hh, stream_data->request.headers, h->name, h->n_name, h);
-        }
+        // else
+        // {
+        //     headers *h = create_header(strndup((char *)name, namelen), namelen, strndup((char *)value, valuelen), valuelen, true);
+        //     HASH_ADD_KEYPTR(hh, stream_data->request.headers, h->name, h->n_name, h);
+        // }
         break;
     }
     return 0;

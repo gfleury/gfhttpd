@@ -14,7 +14,7 @@ headers server_status = {
     .n_value = sizeof("200") - 1,
 };
 
-headers *create_header(mem_pool mp, char *name, int n_name, char *value, int n_value, bool must_free)
+headers *create_header(mem_pool mp, char *name, int n_name, char *value, int n_value)
 {
     headers *header = mp_calloc(mp, 1, sizeof(headers));
     header->name = name;

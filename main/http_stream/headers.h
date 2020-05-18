@@ -8,8 +8,6 @@
 
 #include "uthash.h"
 
-#include <stdbool.h>
-
 typedef struct headers
 {
     char *name;
@@ -21,7 +19,7 @@ typedef struct headers
 } headers;
 
 void add_header(headers **pheaders, mem_pool mp, headers *header);
-headers *create_header(mem_pool mp, char *name, int n_name, char *value, int n_value, bool must_free);
+headers *create_header(mem_pool mp, char *name, int n_name, char *value, int n_value);
 headers *insert_header(headers **pheaders, mem_pool mp, char *name, int n_name, char *value, int n_value);
 unsigned int length_header(headers **pheaders);
 headers *get_header(headers **pheaders, char *name);

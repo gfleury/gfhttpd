@@ -65,7 +65,11 @@ static bool validate_token(const uint8_t *token, size_t token_len,
 static struct http_stream *create_conn(struct app_context *app_ctx, uint8_t *odcid, size_t odcid_len)
 {
     struct http3_params *http3_params = calloc(1, sizeof(struct http3_params));
-    struct http_stream *hs = calloc(1, sizeof(*hs));
+    mem_pool mp = mp_new(16 * 1024);
+
+    struct http_stream *hs = mp_calloc(mp, 1, sizeof(*hs));
+    assert(hs);
+    hs->mp = mp;
 
     struct connections *conns = app_ctx->conns;
 
@@ -169,8 +173,7 @@ static int for_each_header(uint8_t *name, size_t name_len, uint8_t *value, size_
     }
     else
     { // Normal headers
-        headers *h = create_header(strndup((char *)name, name_len), name_len, strndup((char *)value, value_len), value_len, true);
-        HASH_ADD_KEYPTR(hh, hs->request.headers, h->name, h->n_name, h);
+        insert_header(&hs->request.headers, hs->mp, strndup((char *)name, name_len), name_len, strndup((char *)value, value_len), value_len);
     }
     return 0;
 }
@@ -368,9 +371,9 @@ void http3_event_cb(const int sock, short int which, void *arg)
                     }
 
                     // Init Response
-                    insert_header(&hs->response.headers, server_status.name, server_status.n_name, server_status.value, server_status.n_value);
-                    insert_header(&hs->response.headers, server_header.name, server_header.n_name, server_header.value, server_header.n_value);
-                    insert_header(&hs->response.headers, "content-length", sizeof("content-length") - 1, "5", sizeof("5") - 1);
+                    insert_header(&hs->response.headers, hs->mp, server_status.name, server_status.n_name, server_status.value, server_status.n_value);
+                    insert_header(&hs->response.headers, hs->mp, server_header.name, server_header.n_name, server_header.value, server_header.n_value);
+                    insert_header(&hs->response.headers, hs->mp, "content-length", sizeof("content-length") - 1, "5", sizeof("5") - 1);
 
                     hs->response.content_lenght = -1;
 

@@ -49,6 +49,8 @@ struct http_stream
     struct timeval timer;
     struct route *routes;
 
+    mem_pool mp;
+
     int sock;
     struct app_context *app_ctx;
 
