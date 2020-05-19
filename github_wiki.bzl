@@ -33,7 +33,7 @@ def _github_wiki_impl(ctx):
             progress_message = "Commiting the changes on %s" % clonedir.short_path,
             command = "export HOME=\"$PWD\" && git config --global user.email \"{}\" && git config --global user.name \"{}\" &&".format(ctx.attr.git_email, ctx.attr.git_name) +
                       "git clone {} {} && ".format(ctx.attr.clone_url, clonedir.path) +
-                      "cp -Lrf {}/* {} && ".format(output[0].dirname, clonedir.path) +
+                      "for file in {}/*; do cat $file >> {}/$(basename $file); done && ".format(output[0].dirname, clonedir.path) +
                       "cd {} && ".format(clonedir.path) +
                       "git add * && git commit -a -m '\''Commit msg'\'' && git push || true",
         )
