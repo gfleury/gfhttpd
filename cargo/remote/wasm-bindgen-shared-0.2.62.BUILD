@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "notice", # "ISC"
+  "notice", # "MIT,Apache-2.0"
 ])
 
 load(
@@ -23,11 +23,11 @@ load(
 )
 
 
-# Unsupported target "tests" with type "test" omitted
+# Unsupported target "build-script-build" with type "custom-build" omitted
 
 rust_library(
-    name = "untrusted",
-    crate_root = "src/untrusted.rs",
+    name = "wasm_bindgen_shared",
+    crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
@@ -36,7 +36,7 @@ rust_library(
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.7.0",
+    version = "0.2.62",
     crate_features = [
     ],
 )

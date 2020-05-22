@@ -36,10 +36,10 @@ rust_binary(
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.0",
+    version = "0.4.0",
     visibility = ["//visibility:private"],
     deps = [
-        "@raze__cmake__0_1_42//:cmake",
+        "@raze__cmake__0_1_44//:cmake",
     ],
 )
 
@@ -93,10 +93,11 @@ rust_library(
     name = "quiche",
     srcs = glob(["**/*.rs"]),
     crate_features = [
-        # "boringssl-vendored",
+        "boringssl-vendored",
         "default",
     ],
     crate_root = "src/lib.rs",
+    # crate_type = "lib",
     crate_type = "staticlib",
     edition = "2018",
     out_dir_tar = ":quiche_build_script_executor",
@@ -104,20 +105,20 @@ rust_library(
         "--cap-lints=allow",
         "--cfg=use_proc_macro",
     ],
-    version = "0.3.0",
+    version = "0.4.0",
     deps = [
-        "@boringssl//:ssl",
         "@raze__lazy_static__1_4_0//:lazy_static",
-        "@raze__libc__0_2_68//:libc",
+        "@raze__libc__0_2_70//:libc",
+        "@raze__libm__0_2_1//:libm",
         "@raze__log__0_4_8//:log",
-        "@raze__ring__0_16_12//:ring",
+        "@raze__ring__0_16_13//:ring",
     ],
 )
+
+# Unsupported target "quiche" with type "staticlib" omitted
+# Unsupported target "server" with type "example" omitted
 
 filegroup(
     name = "headers",
     srcs = glob(["include/*.h"]),
 )
-
-# Unsupported target "quiche" with type "staticlib" omitted
-# Unsupported target "server" with type "example" omitted

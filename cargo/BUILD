@@ -10,7 +10,7 @@ licenses([
 ])
 alias(
     name = "cc",
-    actual = "@raze__cc__1_0_50//:cc",
+    actual = "@raze__cc__1_0_54//:cc",
 )
 alias(
     name = "lazy_static",
@@ -18,7 +18,11 @@ alias(
 )
 alias(
     name = "libc",
-    actual = "@raze__libc__0_2_68//:libc",
+    actual = "@raze__libc__0_2_70//:libc",
+)
+alias(
+    name = "libm",
+    actual = "@raze__libm__0_2_1//:libm",
 )
 alias(
     name = "log",
@@ -26,9 +30,9 @@ alias(
 )
 alias(
     name = "quiche",
-    actual = "@raze__quiche__0_3_0//:quiche",
+    actual = "@raze__quiche__0_4_0//:quiche",
 )
 alias(
     name = "ring",
-    actual = "@raze__ring__0_16_12//:ring",
+    actual = "@raze__ring__0_16_13//:ring",
 )

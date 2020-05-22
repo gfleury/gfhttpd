@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "restricted", # "MIT OR Apache-2.0"
+  "notice", # "MIT,Apache-2.0"
 ])
 
 load(
@@ -23,24 +23,21 @@ load(
 )
 
 
-# Unsupported target "build-script-build" with type "custom-build" omitted
-# Unsupported target "const_fn" with type "test" omitted
 
 rust_library(
-    name = "libc",
+    name = "cmake",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2015",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__cc__1_0_54//:cc",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.2.68",
+    version = "0.1.44",
     crate_features = [
-        "default",
-        "std",
     ],
 )
 

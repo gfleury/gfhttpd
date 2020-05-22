@@ -23,21 +23,26 @@ load(
 )
 
 
-# Unsupported target "build-script-build" with type "custom-build" omitted
+# Unsupported target "wasm" with type "test" omitted
 
 rust_library(
-    name = "wasm_bindgen_shared",
+    name = "web_sys",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__js_sys__0_3_39//:js_sys",
+        "@raze__wasm_bindgen__0_2_62//:wasm_bindgen",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.2.60",
+    version = "0.3.39",
     crate_features = [
+        "Crypto",
+        "EventTarget",
+        "Window",
     ],
 )
 

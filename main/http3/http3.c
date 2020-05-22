@@ -177,7 +177,7 @@ void future_write_cb(const int sock, short int which, void *arg)
 
         hs->response.headers_sent = true;
         fw->len = hs->response.content_lenght;
-        free(headers);
+        // free(headers);
     }
     else if (hs->response.headers_sent == false && hs->response.content_lenght == -1)
     {
@@ -228,7 +228,7 @@ void future_write_cb(const int sock, short int which, void *arg)
     {
         event_del(fw->fw_event);
         close(fd);
-        free(fw);
+        // free(fw);
     }
 
     return;
@@ -236,7 +236,7 @@ void future_write_cb(const int sock, short int which, void *arg)
 
 static void set_timeout(struct http_stream *hs, int64_t q_tout)
 {
-    if (q_tout)
+    if (q_tout && hs->timeout_ev)
     {
         time_t tout = (q_tout + 999999) / 1000000;
 
@@ -266,7 +266,7 @@ int send_response(struct http_stream *hs, int64_t stream_id, int fd)
     fw->len = -1;
     fw->eof = false;
 
-    fw->fw_event = evtimer_new(hs->app_ctx->evbase, future_write_cb, fw);
+    fw->fw_event = evtimer_new(hs->evbase, future_write_cb, fw);
     struct timeval half_sec = {0, 1000};
     event_add(fw->fw_event, &half_sec);
     event_active(fw->fw_event, 0, 0);
@@ -299,6 +299,13 @@ void flush_egress(struct http_stream *hs)
         ssize_t sent = sendto(hs->sock, out, written, 0,
                               (struct sockaddr *)&hs->peer_addr,
                               hs->peer_addr_len);
+
+        if (sent == -1 && errno == EISCONN)
+        {
+            sent = send(hs->sock, out, written, 0);
+            errno = 0;
+        }
+
         if (sent != written)
         {
             log_error("failed to send: %d", errno);
@@ -315,10 +322,11 @@ void flush_egress(struct http_stream *hs)
 void http3_cleanup(struct app_context *app_ctx)
 {
     struct http_stream *hs, *tmp;
-    HASH_ITER(hh, app_ctx->conns->h, hs, tmp)
+    HASH_ITER(hh, app_ctx->conns->http_streams, hs, tmp)
     {
-        HASH_DELETE(hh, app_ctx->conns->h, hs);
+        HASH_DELETE(hh, app_ctx->conns->http_streams, hs);
         http3_connection_cleanup(hs);
+        mp_delete(&hs->mp, true);
     }
 
     close(app_ctx->conns->sock);
@@ -334,9 +342,12 @@ void http3_connection_cleanup(struct http_stream *hs)
     evtimer_del(hs->timeout_ev);
     event_free(hs->timeout_ev);
 
-    quiche_h3_conn_free(http3_params->http3);
+    if (http3_params->http3)
+    {
+        quiche_h3_conn_free(http3_params->http3);
+    }
     quiche_conn_free(http3_params->conn);
-    free(http3_params);
+    // free(http3_params);
 
     free(hs->request.authority);
     free(hs->request.method);
@@ -346,5 +357,6 @@ void http3_connection_cleanup(struct http_stream *hs)
     // delete_header_all(hs->response.headers);
 
     log_debug("Freed the hell out of it.");
-    free(hs);
+    mp_delete(&hs->mp, true);
+    // free(hs);
 }

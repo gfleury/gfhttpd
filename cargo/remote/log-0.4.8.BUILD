@@ -73,7 +73,7 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     deps = [
         "@raze__cfg_if__0_1_10//:cfg_if",
-        "@raze__serde__1_0_106//:serde",
+        "@raze__serde__1_0_110//:serde",
     ],
     rustc_flags = [
         "--cap-lints=allow",

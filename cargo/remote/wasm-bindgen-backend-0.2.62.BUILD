@@ -25,19 +25,26 @@ load(
 
 
 rust_library(
-    name = "cmake",
+    name = "wasm_bindgen_backend",
     crate_root = "src/lib.rs",
     crate_type = "lib",
-    edition = "2015",
+    edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__cc__1_0_50//:cc",
+        "@raze__bumpalo__3_3_0//:bumpalo",
+        "@raze__lazy_static__1_4_0//:lazy_static",
+        "@raze__log__0_4_8//:log",
+        "@raze__proc_macro2__1_0_14//:proc_macro2",
+        "@raze__quote__1_0_6//:quote",
+        "@raze__syn__1_0_23//:syn",
+        "@raze__wasm_bindgen_shared__0_2_62//:wasm_bindgen_shared",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.1.42",
+    version = "0.2.62",
     crate_features = [
+        "spans",
     ],
 )
 

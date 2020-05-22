@@ -30,7 +30,7 @@ rust_binary(
         "alloc",
         "default",
         "dev_urandom_fallback",
-        "lazy_static",
+        "once_cell",
     ],
     crate_root = "build.rs",
     data = glob(["*"]),
@@ -38,10 +38,10 @@ rust_binary(
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.16.12",
+    version = "0.16.13",
     visibility = ["//visibility:private"],
     deps = [
-        "@raze__cc__1_0_50//:cc",
+        "@raze__cc__1_0_54//:cc",
     ],
 )
 
@@ -100,7 +100,7 @@ rust_library(
         "alloc",
         "default",
         "dev_urandom_fallback",
-        "lazy_static",
+        "once_cell",
     ],
     crate_root = "src/lib.rs",
     crate_type = "lib",
@@ -110,20 +110,20 @@ rust_library(
     rustc_flags = [
         "--cap-lints=allow",
         "--cfg=use_proc_macro",
-        "-Lnative=./bazel-out/k8-dbg-ST-5e74b77704d3a70b08875590eb0f067cbb9a6e09f41f090f307cf0d79d4b2461/bin/external/raze__ring__0_16_12/ring.out_dir/",
-        "-Lnative=./bazel-out/k8-fastbuild-ST-5e74b77704d3a70b08875590eb0f067cbb9a6e09f41f090f307cf0d79d4b2461/bin/external/raze__ring__0_16_12/ring.out_dir/",
-        "-Lnative=./bazel-out/darwin-fastbuild-ST-5e74b77704d3a70b08875590eb0f067cbb9a6e09f41f090f307cf0d79d4b2461/bin/external/raze__ring__0_16_12/ring.out_dir/",
-        "-Lnative=./bazel-out/darwin-dbg-ST-5e74b77704d3a70b08875590eb0f067cbb9a6e09f41f090f307cf0d79d4b2461/bin/external/raze__ring__0_16_12/ring.out_dir/",
+        "-Lnative=./bazel-out/k8-dbg-ST-5e74b77704d3a70b08875590eb0f067cbb9a6e09f41f090f307cf0d79d4b2461/bin/external/raze__ring__0_16_13/ring.out_dir/",
+        "-Lnative=./bazel-out/k8-fastbuild-ST-5e74b77704d3a70b08875590eb0f067cbb9a6e09f41f090f307cf0d79d4b2461/bin/external/raze__ring__0_16_13/ring.out_dir/",
+        "-Lnative=./bazel-out/darwin-fastbuild-ST-5e74b77704d3a70b08875590eb0f067cbb9a6e09f41f090f307cf0d79d4b2461/bin/external/raze__ring__0_16_13/ring.out_dir/",
+        "-Lnative=./bazel-out/darwin-dbg-ST-5e74b77704d3a70b08875590eb0f067cbb9a6e09f41f090f307cf0d79d4b2461/bin/external/raze__ring__0_16_13/ring.out_dir/",
         "-lstatic=ring-core",
         "-lstatic=ring-test",
     ],
-    version = "0.16.12",
+    version = "0.16.13",
     deps = [
-        "@raze__cc__1_0_50//:cc",
+        "@raze__cc__1_0_54//:cc",
         "@raze__lazy_static__1_4_0//:lazy_static",
-        "@raze__libc__0_2_68//:libc",
+        "@raze__libc__0_2_70//:libc",
         "@raze__spin__0_5_2//:spin",
-        "@raze__untrusted__0_7_0//:untrusted",
+        "@raze__untrusted__0_7_1//:untrusted",
     ],
 )
 

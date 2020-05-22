@@ -45,14 +45,16 @@ typedef struct http_response
 
 struct http_stream
 {
-    struct event *timeout_ev;
+    struct http_stream *head;
+    struct event_base *evbase;
+
+    struct event *timeout_ev, *module_cb_ev;
     struct timeval timer;
     struct route *routes;
 
     mem_pool mp;
 
     int sock;
-    struct app_context *app_ctx;
 
     // HTTP3 specific
     uint8_t cid[LOCAL_CONN_ID_LEN];
@@ -75,6 +77,6 @@ struct http_stream
 struct connections
 {
     int sock;
-    struct http_stream *h;
+    struct http_stream *http_streams;
 };
 #endif

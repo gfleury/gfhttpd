@@ -108,7 +108,8 @@ int main(int argc, char **argv)
   struct sigaction act;
   char *config_file = "etc/conf.json";
   int opt, fconf;
-  struct config config = {.routes = NULL};
+  mem_pool base_mp = mp_new(16 * 1024);
+  struct config config = {.routes = NULL, .mp = base_mp};
 
   // put ':' in the starting of the
   // string so that program can

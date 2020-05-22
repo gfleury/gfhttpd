@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "notice", # "MIT,Apache-2.0"
+  "restricted", # "MIT OR Apache-2.0"
 ])
 
 load(
@@ -24,30 +24,21 @@ load(
 
 
 # Unsupported target "build-script-build" with type "custom-build" omitted
-# Unsupported target "headless" with type "test" omitted
-# Unsupported target "non_wasm" with type "test" omitted
-# Unsupported target "std-crate-no-std-dep" with type "test" omitted
-# Unsupported target "unwrap_throw" with type "test" omitted
-# Unsupported target "wasm" with type "test" omitted
 
 rust_library(
-    name = "wasm_bindgen",
+    name = "libm",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__cfg_if__0_1_10//:cfg_if",
-        "@raze__wasm_bindgen_macro__0_2_60//:wasm_bindgen_macro",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.2.60",
+    version = "0.2.1",
     crate_features = [
         "default",
-        "spans",
-        "std",
     ],
 )
 

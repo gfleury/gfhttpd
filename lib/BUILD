@@ -65,6 +65,7 @@ configure_make(
         "//main:__pkg__",
         "//main/http2:__pkg__",
         "//main/http3:__pkg__",
+        "//main/http3/tests:__pkg__",
         "//main/log:__pkg__",
         "//modules/golang:__pkg__",
     ],

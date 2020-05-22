@@ -2,7 +2,7 @@ load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_import", "cc_library")
 
 cc_import(
     name = "quiche",
-    hdrs = ["@raze__quiche__0_3_0//:headers"],
+    hdrs = ["@raze__quiche__0_4_0//:headers"],
     static_library = "//cargo:quiche",
     visibility = [
         "//main:__pkg__",
@@ -25,12 +25,15 @@ cc_library(
     copts = [
         "-DHAVE_FCNTL_H",
         "-Werror",
-        "-Iexternal/raze__quiche__0_3_0/include",
+        "-Iexternal/raze__quiche__0_4_0/include",
         "-Iexternal/uthash/src/",
         "-Imain/",
     ],
     linkstatic = True,
-    visibility = ["//main:__pkg__"],
+    visibility = [
+        "//main:__pkg__",
+        "//main/http3/tests:__pkg__",
+    ],
     deps = [
         ":headers",
         ":quiche",

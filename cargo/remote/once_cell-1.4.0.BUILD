@@ -23,21 +23,29 @@ load(
 )
 
 
-# Unsupported target "build-script-build" with type "custom-build" omitted
+# Unsupported target "bench" with type "example" omitted
+# Unsupported target "bench_acquire" with type "example" omitted
+# Unsupported target "bench_vs_lazy_static" with type "example" omitted
+# Unsupported target "lazy_static" with type "example" omitted
 
 rust_library(
-    name = "serde",
+    name = "once_cell",
     crate_root = "src/lib.rs",
     crate_type = "lib",
-    edition = "2015",
+    edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "1.0.106",
+    version = "1.4.0",
     crate_features = [
+        "std",
     ],
 )
 
+# Unsupported target "reentrant_init_deadlocks" with type "example" omitted
+# Unsupported target "regex" with type "example" omitted
+# Unsupported target "test" with type "test" omitted
+# Unsupported target "test_synchronization" with type "example" omitted

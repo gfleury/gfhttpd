@@ -9,6 +9,7 @@ log = { version = "0.4.8", features = ["std", "serde"] }
 cc = { version = "1.0.37", default-features = false }
 ring = "0.16.12"
 libc = "0.2"
+libm = "0.2"
 criterion = { version = "0.3", optional = true }
 lazy_static = "1"
 quiche = { git = "https://github.com/cloudflare/quiche.git", branch = "master" }
@@ -32,7 +33,7 @@ genmode = "Remote"
 # The target to generate BUILD rules for.
 target = "x86_64-apple-darwin"
 
-[raze.crates.quiche.'0.3.0']
+[raze.crates.quiche.'0.4.0']
 gen_buildrs = true
 buildrs_additional_environment_variables=[
     "CARGO_FEATURE_STD=1",
@@ -79,13 +80,13 @@ additional_flags = [
     "--cfg=use_proc_macro",
 ]
 
-[raze.crates.ring.'0.16.12']
+[raze.crates.ring.'0.16.13']
 gen_buildrs = true
 data_attr = "glob([\"**/*.*\"])"
 additional_deps = [
     "@raze__lazy_static__1_4_0//:lazy_static",
-    "@raze__libc__0_2_68//:libc",
-    "@raze__cc__1_0_50//:cc",
+    "@raze__libc__0_2_70//:libc",
+    "@raze__cc__1_0_54//:cc",
 ]
 additional_flags = [
     "--cfg=use_proc_macro",

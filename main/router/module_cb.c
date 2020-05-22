@@ -30,14 +30,16 @@ void module_cb(int fd, short event, void *arg)
         log_error("Something bad happened there...");
         return;
     }
+
+    event_free(hs->module_cb_ev);
     // Check if writing was already done.
     if (hs->request.modules_chain->next != NULL)
     {
         hs->request.modules_chain = hs->request.modules_chain->next;
-        struct event *module_event = evtimer_new(hs->app_ctx->evbase, module_cb, hs);
+        hs->module_cb_ev = evtimer_new(hs->evbase, module_cb, hs);
         struct timeval half_sec = {0, 2000};
 
-        if (evtimer_add(module_event, &half_sec) < 0)
+        if (evtimer_add(hs->module_cb_ev, &half_sec) < 0)
         {
             log_error("Could not add a module_event event");
             return;

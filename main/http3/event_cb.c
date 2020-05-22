@@ -62,7 +62,7 @@ static bool validate_token(const uint8_t *token, size_t token_len,
     return true;
 }
 
-static struct http_stream *create_conn(struct app_context *app_ctx, uint8_t *odcid, size_t odcid_len)
+static struct http_stream *create_conn(int sock, uint8_t *odcid, size_t odcid_len)
 {
     mem_pool mp = mp_new(16 * 1024);
     assert(mp);
@@ -71,8 +71,6 @@ static struct http_stream *create_conn(struct app_context *app_ctx, uint8_t *odc
     struct http_stream *hs = mp_calloc(mp, 1, sizeof(*hs));
     assert(hs);
     hs->mp = mp;
-
-    struct connections *conns = app_ctx->conns;
 
     if (hs == NULL)
     {
@@ -95,31 +93,22 @@ static struct http_stream *create_conn(struct app_context *app_ctx, uint8_t *odc
         return NULL;
     }
 
-    quiche_conn *conn = quiche_accept(hs->cid, LOCAL_CONN_ID_LEN,
-                                      odcid, odcid_len, pquiche_config);
-    if (conn == NULL)
+    http3_params->conn = quiche_accept(hs->cid, LOCAL_CONN_ID_LEN,
+                                       odcid, odcid_len, pquiche_config);
+    if (http3_params->conn == NULL)
     {
         log_error("failed to create connection: %d", errno);
         return NULL;
     }
 
-    hs->sock = conns->sock;
-    hs->app_ctx = app_ctx;
-
-    hs->response.http_status = "200";
+    hs->sock = sock;
 
     // Init Headers
     hs->request.headers = NULL;
     hs->response.headers = NULL;
-
-    http3_params->conn = conn;
+    hs->response.http_status = "200";
 
     hs->http3_params = http3_params;
-
-    hs->timeout_ev = evtimer_new(app_ctx->evbase, timeout_cb, hs);
-    evtimer_add(hs->timeout_ev, &hs->timer);
-
-    HASH_ADD(hh, conns->h, cid, LOCAL_CONN_ID_LEN, hs);
 
     log_debug("new connection");
 
@@ -195,7 +184,7 @@ void http3_event_cb(const int sock, short int which, void *arg)
         socklen_t peer_addr_len = sizeof(peer_addr);
         memset(&peer_addr, 0, peer_addr_len);
 
-        ssize_t read = recvfrom(conns->sock, buf, sizeof(buf), 0,
+        ssize_t read = recvfrom(sock, buf, sizeof(buf), 0,
                                 (struct sockaddr *)&peer_addr,
                                 &peer_addr_len);
 
@@ -210,6 +199,8 @@ void http3_event_cb(const int sock, short int which, void *arg)
             log_error("failed to read");
             return;
         }
+
+        log_debug("Read %zu bytes", read);
 
         uint8_t type;
         uint32_t version;
@@ -235,13 +226,13 @@ void http3_event_cb(const int sock, short int which, void *arg)
             return;
         }
 
-        HASH_FIND(hh, conns->h, dcid, dcid_len, hs);
+        HASH_FIND(hh, conns->http_streams, dcid, dcid_len, hs);
 
         if (hs == NULL)
         {
             if (!quiche_version_is_supported(version))
             {
-                log_debug("version negotiation");
+                log_debug("version negotiation, %zu is not supported", version);
 
                 ssize_t written = quiche_negotiate_version(scid, scid_len,
                                                            dcid, dcid_len,
@@ -254,12 +245,19 @@ void http3_event_cb(const int sock, short int which, void *arg)
                     return;
                 }
 
-                ssize_t sent = sendto(conns->sock, out, written, 0,
+                ssize_t sent = sendto(sock, out, written, 0,
                                       (struct sockaddr *)&peer_addr,
                                       peer_addr_len);
+
+                if (sent == -1 && errno == EISCONN)
+                {
+                    sent = send(sock, out, written, 0);
+                    errno = 0;
+                }
+
                 if (sent != written)
                 {
-                    log_error("failed to send: %d", errno);
+                    log_error("failed to send: errno=%d sent=%d written=%d", errno, sent, written);
                     return;
                 }
 
@@ -287,9 +285,16 @@ void http3_event_cb(const int sock, short int which, void *arg)
                     return;
                 }
 
-                ssize_t sent = sendto(conns->sock, out, written, 0,
+                ssize_t sent = sendto(sock, out, written, 0,
                                       (struct sockaddr *)&peer_addr,
                                       peer_addr_len);
+
+                if (sent == -1 && errno == EISCONN)
+                {
+                    sent = send(sock, out, written, 0);
+                    errno = 0;
+                }
+
                 if (sent != written)
                 {
                     log_error("failed to send: %d", errno);
@@ -307,11 +312,21 @@ void http3_event_cb(const int sock, short int which, void *arg)
                 return;
             }
 
-            hs = create_conn(app_ctx, odcid, odcid_len);
+            hs = create_conn(sock, odcid, odcid_len);
             if (hs == NULL)
             {
                 return;
             }
+            // TODO: move all ev timers to hs structure and remove evbase dependency
+            hs->evbase = app_ctx->evbase;
+            hs->timeout_ev = evtimer_new(app_ctx->evbase, timeout_cb, hs);
+            assert(hs->timeout_ev);
+
+            evtimer_add(hs->timeout_ev, &hs->timer);
+
+            mem_pool mp = hs->mp;
+            HASH_ADD(hh, conns->http_streams, cid, LOCAL_CONN_ID_LEN, hs);
+            hs->head = conns->http_streams;
 
             memcpy(&hs->peer_addr, &peer_addr, peer_addr_len);
             hs->peer_addr_len = peer_addr_len;
@@ -330,6 +345,8 @@ void http3_event_cb(const int sock, short int which, void *arg)
         if (done < 0)
         {
             log_error("failed to process packet: %zd", done);
+            HASH_DELETE(hh, conns->http_streams, hs);
+            http3_connection_cleanup(hs);
             return;
         }
 
@@ -378,7 +395,7 @@ void http3_event_cb(const int sock, short int which, void *arg)
 
                     hs->response.content_lenght = -1;
 
-                    int fd = root_router(hs->app_ctx->evbase, hs);
+                    int fd = root_router(hs->evbase, hs);
                     if (fd == -1)
                     {
                         log_error("%s %s We are fucked, unable to root_router.", hs->request.method, hs->request.url);
@@ -406,7 +423,7 @@ void http3_event_cb(const int sock, short int which, void *arg)
     }
 
     int c = 0;
-    HASH_ITER(hh, conns->h, hs, tmp)
+    HASH_ITER(hh, conns->http_streams, hs, tmp)
     {
         log_debug("Going thru loop connection count %d", c++);
         struct http3_params *http3_params = hs->http3_params;
@@ -420,7 +437,7 @@ void http3_event_cb(const int sock, short int which, void *arg)
             log_info("connection closed, recv=%zu sent=%zu lost=%zu rtt=%" PRIu64 "ns cwnd=%zu",
                      stats.recv, stats.sent, stats.lost, stats.rtt, stats.cwnd);
 
-            HASH_DELETE(hh, conns->h, hs);
+            HASH_DELETE(hh, conns->http_streams, hs);
             http3_connection_cleanup(hs);
         }
     }

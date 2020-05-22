@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "notice", # "MIT,Apache-2.0"
+  "restricted", # "MIT OR Apache-2.0"
 ])
 
 load(
@@ -23,42 +23,27 @@ load(
 )
 
 
+# Unsupported target "build-script-build" with type "custom-build" omitted
+# Unsupported target "comments" with type "test" omitted
+# Unsupported target "features" with type "test" omitted
+# Unsupported target "marker" with type "test" omitted
 
 rust_library(
-    name = "cc",
+    name = "proc_macro2",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "@raze__unicode_xid__0_2_0//:unicode_xid",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "1.0.50",
+    version = "1.0.14",
     crate_features = [
-    ],
-)
-
-# Unsupported target "cc_env" with type "test" omitted
-# Unsupported target "cflags" with type "test" omitted
-# Unsupported target "cxxflags" with type "test" omitted
-rust_binary(
-    # Prefix bin name to disambiguate from (probable) collision with lib name
-    # N.B.: The exact form of this is subject to change.
-    name = "cargo_bin_gcc_shim",
-    crate_root = "src/bin/gcc-shim.rs",
-    edition = "2018",
-    srcs = glob(["**/*.rs"]),
-    deps = [
-        # Binaries get an implicit dependency on their crate's lib
-        ":cc",
-    ],
-    rustc_flags = [
-        "--cap-lints=allow",
-    ],
-    version = "1.0.50",
-    crate_features = [
+        "default",
+        "proc-macro",
     ],
 )
 

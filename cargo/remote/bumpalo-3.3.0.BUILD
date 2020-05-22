@@ -23,24 +23,30 @@ load(
 )
 
 
-# Unsupported target "ui" with type "test" omitted
+# Unsupported target "alloc_fill" with type "test" omitted
+# Unsupported target "alloc_with" with type "test" omitted
+# Unsupported target "benches" with type "bench" omitted
 
 rust_library(
-    name = "wasm_bindgen_macro",
+    name = "bumpalo",
     crate_root = "src/lib.rs",
-    crate_type = "proc-macro",
+    crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__quote__1_0_3//:quote",
-        "@raze__wasm_bindgen_macro_support__0_2_60//:wasm_bindgen_macro_support",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.2.60",
+    version = "3.3.0",
     crate_features = [
-        "spans",
+        "default",
     ],
 )
 
+# Unsupported target "quickchecks" with type "test" omitted
+# Unsupported target "readme_up_to_date" with type "test" omitted
+# Unsupported target "string" with type "test" omitted
+# Unsupported target "tests" with type "test" omitted
+# Unsupported target "try_alloc" with type "test" omitted
+# Unsupported target "vec" with type "test" omitted

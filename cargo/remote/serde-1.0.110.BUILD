@@ -12,7 +12,7 @@ package(default_visibility = [
 ])
 
 licenses([
-  "notice", # "MIT,Apache-2.0"
+  "restricted", # "MIT OR Apache-2.0"
 ])
 
 load(
@@ -23,23 +23,21 @@ load(
 )
 
 
-# Unsupported target "headless" with type "test" omitted
+# Unsupported target "build-script-build" with type "custom-build" omitted
 
 rust_library(
-    name = "js_sys",
+    name = "serde",
     crate_root = "src/lib.rs",
     crate_type = "lib",
-    edition = "2018",
+    edition = "2015",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__wasm_bindgen__0_2_60//:wasm_bindgen",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.37",
+    version = "1.0.110",
     crate_features = [
     ],
 )
 
-# Unsupported target "wasm" with type "test" omitted

@@ -23,26 +23,26 @@ load(
 )
 
 
-# Unsupported target "wasm" with type "test" omitted
 
 rust_library(
-    name = "web_sys",
+    name = "wasm_bindgen_macro_support",
     crate_root = "src/lib.rs",
     crate_type = "lib",
     edition = "2018",
     srcs = glob(["**/*.rs"]),
     deps = [
-        "@raze__js_sys__0_3_37//:js_sys",
-        "@raze__wasm_bindgen__0_2_60//:wasm_bindgen",
+        "@raze__proc_macro2__1_0_14//:proc_macro2",
+        "@raze__quote__1_0_6//:quote",
+        "@raze__syn__1_0_23//:syn",
+        "@raze__wasm_bindgen_backend__0_2_62//:wasm_bindgen_backend",
+        "@raze__wasm_bindgen_shared__0_2_62//:wasm_bindgen_shared",
     ],
     rustc_flags = [
         "--cap-lints=allow",
     ],
-    version = "0.3.37",
+    version = "0.2.62",
     crate_features = [
-        "Crypto",
-        "EventTarget",
-        "Window",
+        "spans",
     ],
 )
 

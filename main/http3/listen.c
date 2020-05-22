@@ -50,7 +50,7 @@ int http3_start_listen(struct event_base *evbase, const char *service,
 
   struct connections *c = calloc(1, sizeof(struct connections));
   c->sock = sock;
-  c->h = NULL;
+  c->http_streams = NULL;
 
   app_ctx->conns = c;
   app_ctx->evbase = evbase;
