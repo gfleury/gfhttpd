@@ -4,9 +4,9 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "http_stream/http_stream.h"
-
 #include "config/routes.h"
+
+#include "http_stream/http_stream.h"
 
 #include "log/log.h"
 

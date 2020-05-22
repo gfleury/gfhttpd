@@ -1,33 +1,49 @@
 #include "http_stream.h"
 
-void add_connection(struct http_stream **pconnections, mem_pool mp, struct http_stream *hs)
+static struct http_stream *head = NULL;
+
+struct http_stream *connections_iter()
 {
-    HASH_ADD(hh, *pconnections, cid, sizeof(hs->cid), hs);
+    return head;
 }
 
-struct http_stream *get_connection(struct http_stream **pconnections, uint8_t cid[LOCAL_CONN_ID_LEN])
+void add_connection(struct http_stream *hs)
 {
-    struct http_stream *hs;
-    HASH_FIND(hh, *pconnections, cid, sizeof(hs->cid), hs);
-    return hs;
-}
+    struct http_stream *ptr;
+    ptr = get_connection(hs->cid);
 
-void delete_connection(struct http_stream **pconnections, struct http_stream *hs)
-{
-    HASH_DEL(*pconnections, hs);
-}
-
-void delete_connections_all(struct http_stream **pconnections)
-{
-    struct http_stream *current, *tmp;
-
-    HASH_ITER(hh, *pconnections, current, tmp)
+    if (ptr == NULL)
     {
-        HASH_DEL(*pconnections, current); /* delete; users advances to next */
+        HASH_ADD(hh, head, cid, LOCAL_CONN_ID_LEN, hs);
+    }
+    else
+    {
+        *ptr = *hs;
     }
 }
 
-unsigned int length_connection(struct http_stream **pconnections)
+struct http_stream *get_connection(uint8_t cid[LOCAL_CONN_ID_LEN])
 {
-    return HASH_COUNT(*pconnections);
+    struct http_stream *hs;
+    HASH_FIND(hh, head, cid, LOCAL_CONN_ID_LEN, hs);
+    return hs;
+}
+
+void delete_connection(struct http_stream *hs)
+{
+    HASH_DEL(head, hs);
+}
+
+void delete_connections_all()
+{
+    struct http_stream *current, *tmp;
+    HASH_ITER(hh, head, current, tmp)
+    {
+        HASH_DEL(head, current); /* delete; users advances to next */
+    }
+}
+
+unsigned int length_connection()
+{
+    return HASH_COUNT(head);
 }

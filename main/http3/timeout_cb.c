@@ -14,9 +14,7 @@ void timeout_cb(const int sock, short int which, void *arg)
 {
     struct http_stream *hs = arg;
     struct http3_params *http3_params = hs->http3_params;
-    // struct app_context *app_ctx = hs->app_ctx;
-    // struct connections *conns = app_ctx->conns;
-
+    
     quiche_conn_on_timeout(http3_params->conn);
 
     log_debug("timeout");
@@ -31,13 +29,8 @@ void timeout_cb(const int sock, short int which, void *arg)
         log_debug("connection closed, recv=%zu sent=%zu lost=%zu rtt=%" PRIu64 "ns cwnd=%zu",
                   stats.recv, stats.sent, stats.lost, stats.rtt, stats.cwnd);
 
-        /* 
-         * Clean-up timeout event, 
-         * connection free/removal will happen on event_cb on next 'read' event
-         */
-        evtimer_del(hs->timeout_ev);
-        event_free(hs->timeout_ev);
-        hs->timeout_ev = NULL;
+        delete_connection(hs);
+        http3_connection_cleanup(hs);
 
         return;
     }

@@ -57,7 +57,6 @@ headers *get_header(headers **pheaders, char *name)
 void delete_header(headers **pheaders, headers *del_header)
 {
     HASH_DEL(*pheaders, del_header);
-    free(del_header);
 }
 
 void delete_header_all(headers **pheaders)

@@ -65,7 +65,6 @@ int test_event_cb()
 
     app_ctx.conns = calloc(1, sizeof(struct connections));
     app_ctx.conns->sock = fds[0];
-    app_ctx.conns->http_streams = NULL;
 
     struct event *watcher = event_new(app_ctx.evbase, fds[0], EV_READ | EV_PERSIST, http3_event_cb, &app_ctx);
     assert(watcher != NULL);

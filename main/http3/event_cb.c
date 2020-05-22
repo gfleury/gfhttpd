@@ -67,16 +67,16 @@ static struct http_stream *create_conn(int sock, uint8_t *odcid, size_t odcid_le
     mem_pool mp = mp_new(16 * 1024);
     assert(mp);
 
-    struct http3_params *http3_params = mp_calloc(mp, 1, sizeof(struct http3_params));
-    struct http_stream *hs = mp_calloc(mp, 1, sizeof(*hs));
-    assert(hs);
-    hs->mp = mp;
-
+    struct http_stream *hs = mp_calloc(mp, 1, sizeof(struct http_stream));
     if (hs == NULL)
     {
         log_error("failed to allocate http stream");
         return NULL;
     }
+
+    hs->mp = mp;
+
+    struct http3_params *http3_params = mp_calloc(mp, 1, sizeof(struct http3_params));
 
     int rng = open("/dev/urandom", O_RDONLY);
     if (rng < 0)
@@ -173,7 +173,6 @@ void http3_event_cb(const int sock, short int which, void *arg)
     struct http_stream *tmp, *hs = NULL;
 
     struct app_context *app_ctx = arg;
-    struct connections *conns = app_ctx->conns;
 
     static uint8_t buf[65535];
     static uint8_t out[MAX_DATAGRAM_SIZE];
@@ -226,8 +225,7 @@ void http3_event_cb(const int sock, short int which, void *arg)
             return;
         }
 
-        // HASH_FIND(hh, conns->http_streams, dcid, dcid_len, hs);
-        hs = get_connection(&conns->http_streams, dcid);
+        hs = get_connection(dcid);
 
         if (hs == NULL)
         {
@@ -326,10 +324,7 @@ void http3_event_cb(const int sock, short int which, void *arg)
 
             evtimer_add(hs->timeout_ev, &hs->timer);
 
-            mem_pool mp = hs->mp;
-            //HASH_ADD(hh, conns->http_streams, cid, LOCAL_CONN_ID_LEN, hs);
-            add_connection(&conns->http_streams, mp, hs);
-            hs->head = conns->http_streams;
+            add_connection(hs);
 
             memcpy(&hs->peer_addr, &peer_addr, peer_addr_len);
             hs->peer_addr_len = peer_addr_len;
@@ -349,7 +344,7 @@ void http3_event_cb(const int sock, short int which, void *arg)
         {
             log_error("failed to process packet: %zd", done);
             // HASH_DELETE(hh, conns->http_streams, hs);
-            delete_connection(&conns->http_streams, hs);
+            delete_connection(hs);
             http3_connection_cleanup(hs);
             return;
         }
@@ -427,7 +422,8 @@ void http3_event_cb(const int sock, short int which, void *arg)
     }
 
     int c = 0;
-    HASH_ITER(hh, conns->http_streams, hs, tmp)
+
+    HASH_ITER(hh, connections_iter(), hs, tmp)
     {
         log_debug("Going thru loop connection count %d", c++);
         struct http3_params *http3_params = hs->http3_params;
@@ -442,7 +438,7 @@ void http3_event_cb(const int sock, short int which, void *arg)
                      stats.recv, stats.sent, stats.lost, stats.rtt, stats.cwnd);
 
             // HASH_DELETE(hh, conns->http_streams, hs);
-            delete_connection(&conns->http_streams, hs);
+            delete_connection(hs);
             http3_connection_cleanup(hs);
         }
     }

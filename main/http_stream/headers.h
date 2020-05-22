@@ -3,8 +3,13 @@
 
 #include "mem/mem.h"
 
+#ifndef uthash_malloc
 #define uthash_malloc(sz) mp_alloc(mp, sz)
+#endif
+
+#ifndef uthash_free
 #define uthash_free(ptr, sz) mp_fake_free(ptr)
+#endif
 
 #include "uthash.h"
 

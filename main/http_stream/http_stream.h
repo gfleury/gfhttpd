@@ -5,11 +5,11 @@
 
 #include <openssl/ssl.h>
 
+#include <uthash.h>
+
 #include "headers.h"
 
 #include "config/config.h"
-
-#include <uthash.h>
 
 #define LOCAL_CONN_ID_LEN 16
 
@@ -45,7 +45,6 @@ typedef struct http_response
 
 struct http_stream
 {
-    struct http_stream *head;
     struct event_base *evbase;
 
     struct event *timeout_ev, *module_cb_ev;
@@ -77,12 +76,13 @@ struct http_stream
 struct connections
 {
     int sock;
-    struct http_stream *http_streams;
 };
 
-void add_connection(struct http_stream **pconnections, mem_pool mp, struct http_stream *hs);
-struct http_stream *get_connection(struct http_stream **pconnections, uint8_t *cid);
-void delete_connection(struct http_stream **pconnections, struct http_stream *hs);
-void delete_connections_all(struct http_stream **pconnections);
-unsigned int length_connection(struct http_stream **pconnections);
+struct http_stream *connections_iter();
+void add_connection(struct http_stream *hs);
+struct http_stream *get_connection(uint8_t *cid);
+void delete_connection(struct http_stream *hs);
+void delete_connections_all();
+unsigned int length_connection();
+
 #endif

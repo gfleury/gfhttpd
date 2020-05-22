@@ -331,11 +331,10 @@ void http3_cleanup(struct app_context *app_ctx)
     struct http_stream *hs, *tmp;
     int c = 0;
 
-    HASH_ITER(hh, app_ctx->conns->http_streams, hs, tmp)
+    HASH_ITER(hh, connections_iter(), hs, tmp)
     {
         log_debug("Going thru loop connection count %d", c++);
-        // HASH_DELETE(hh, app_ctx->conns->http_streams, hs);
-        delete_connection(&app_ctx->conns->http_streams, hs);
+        delete_connection(hs);
         http3_connection_cleanup(hs);
     }
 
@@ -349,14 +348,8 @@ void http3_connection_cleanup(struct http_stream *hs)
 {
     struct http3_params *http3_params = hs->http3_params;
 
-    log_debug("==> H3 Cleanup %u", hs->cid[1]);
-
-    if (hs->timeout_ev)
-    {
-        evtimer_del(hs->timeout_ev);
-        event_free(hs->timeout_ev);
-        hs->timeout_ev = NULL;
-    }
+    evtimer_del(hs->timeout_ev);
+    event_free(hs->timeout_ev);
 
     if (http3_params->http3)
     {
@@ -364,19 +357,13 @@ void http3_connection_cleanup(struct http_stream *hs)
         http3_params->http3 = NULL;
     }
 
-    if (http3_params->conn)
-    {
-        quiche_conn_free(http3_params->conn);
-        http3_params->conn = NULL;
-    }
+    quiche_conn_free(http3_params->conn);
+    http3_params->conn = NULL;
 
-    if (hs->request.method)
-    {
-        free(hs->request.authority);
-        free(hs->request.method);
-        free(hs->request.url);
-        free(hs->request.scheme);
-    }
+    free(hs->request.authority);
+    free(hs->request.method);
+    free(hs->request.url);
+    free(hs->request.scheme);
 
     delete_header_all(&hs->request.headers);
     // delete_header_all(hs->response.headers);
