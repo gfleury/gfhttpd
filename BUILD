@@ -19,3 +19,9 @@ filegroup(
     ],
     visibility = ["//visibility:public"],
 )
+
+filegroup(
+    name = "mocked_certificate",
+    srcs = glob(["cert/**"]),
+    visibility = ["//visibility:public"],
+)

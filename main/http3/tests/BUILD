@@ -14,6 +14,7 @@ cc_test(
         "-Iexternal/raze__quiche__0_4_0/include",
     ],
     data = [
+        "//:mocked_certificate",
         "//:valgrind_suppress",
     ],
     linkopts = select({
