@@ -122,6 +122,7 @@ rust_library(
         "@raze__cc__1_0_54//:cc",
         "@raze__lazy_static__1_4_0//:lazy_static",
         "@raze__libc__0_2_70//:libc",
+        "@raze__once_cell__1_4_0//:once_cell",
         "@raze__spin__0_5_2//:spin",
         "@raze__untrusted__0_7_1//:untrusted",
     ],
