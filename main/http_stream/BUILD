@@ -20,6 +20,7 @@ cc_library(
     deps = [
         "//main/config:config_headers",
         "//main/mem",
+        "@boringssl//:ssl",
         "@uthash//:uthash_lib",
     ],
 )

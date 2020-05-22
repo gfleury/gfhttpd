@@ -226,7 +226,8 @@ void http3_event_cb(const int sock, short int which, void *arg)
             return;
         }
 
-        HASH_FIND(hh, conns->http_streams, dcid, dcid_len, hs);
+        // HASH_FIND(hh, conns->http_streams, dcid, dcid_len, hs);
+        hs = get_connection(&conns->http_streams, dcid);
 
         if (hs == NULL)
         {
@@ -315,6 +316,7 @@ void http3_event_cb(const int sock, short int which, void *arg)
             hs = create_conn(sock, odcid, odcid_len);
             if (hs == NULL)
             {
+                log_error("Failed to create connection!");
                 return;
             }
             // TODO: move all ev timers to hs structure and remove evbase dependency
@@ -325,7 +327,8 @@ void http3_event_cb(const int sock, short int which, void *arg)
             evtimer_add(hs->timeout_ev, &hs->timer);
 
             mem_pool mp = hs->mp;
-            HASH_ADD(hh, conns->http_streams, cid, LOCAL_CONN_ID_LEN, hs);
+            //HASH_ADD(hh, conns->http_streams, cid, LOCAL_CONN_ID_LEN, hs);
+            add_connection(&conns->http_streams, mp, hs);
             hs->head = conns->http_streams;
 
             memcpy(&hs->peer_addr, &peer_addr, peer_addr_len);
@@ -345,7 +348,8 @@ void http3_event_cb(const int sock, short int which, void *arg)
         if (done < 0)
         {
             log_error("failed to process packet: %zd", done);
-            HASH_DELETE(hh, conns->http_streams, hs);
+            // HASH_DELETE(hh, conns->http_streams, hs);
+            delete_connection(&conns->http_streams, hs);
             http3_connection_cleanup(hs);
             return;
         }
@@ -437,7 +441,8 @@ void http3_event_cb(const int sock, short int which, void *arg)
             log_info("connection closed, recv=%zu sent=%zu lost=%zu rtt=%" PRIu64 "ns cwnd=%zu",
                      stats.recv, stats.sent, stats.lost, stats.rtt, stats.cwnd);
 
-            HASH_DELETE(hh, conns->http_streams, hs);
+            // HASH_DELETE(hh, conns->http_streams, hs);
+            delete_connection(&conns->http_streams, hs);
             http3_connection_cleanup(hs);
         }
     }

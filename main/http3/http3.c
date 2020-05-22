@@ -77,14 +77,23 @@ int http3_init_config(struct config *config)
         return -1;
     }
 
-    quiche_config_load_cert_chain_from_pem_file(pquiche_config, config->cert_file);
-    quiche_config_load_priv_key_from_pem_file(pquiche_config, config->key_file);
+    if (quiche_config_load_cert_chain_from_pem_file(pquiche_config, config->cert_file) != 0)
+    {
+        log_error("Unable to open/load cert file: %s, errno: %d", config->cert_file, errno);
+        return -1;
+    }
+
+    if (quiche_config_load_priv_key_from_pem_file(pquiche_config, config->key_file) != 0)
+    {
+        log_error("Unable to open/load key file: %s, errno: %d", config->key_file, errno);
+        return -1;
+    }
 
     quiche_config_set_application_protos(pquiche_config,
                                          (uint8_t *)QUICHE_H3_APPLICATION_PROTOCOL,
                                          sizeof(QUICHE_H3_APPLICATION_PROTOCOL) - 1);
 
-    quiche_config_set_max_idle_timeout(pquiche_config, 180000);
+    quiche_config_set_max_idle_timeout(pquiche_config, 5000);
     // quiche_config_set_max_packet_size(config, MAX_DATAGRAM_SIZE);
     quiche_config_set_initial_max_data(pquiche_config, 10485760);
     // quiche_config_set_initial_max_stream_data_bidi_local(config, 1000000);
@@ -156,8 +165,6 @@ void future_write_cb(const int sock, short int which, void *arg)
     struct future_write *fw = arg;
     struct http_stream *hs = fw->hs;
     struct http3_params *http3_params = hs->http3_params;
-    // struct app_context *app_ctx = hs->app_ctx;
-    // struct connections *conns = app_ctx->conns;
     char buf[14515];
 
     if (quiche_conn_is_closed(http3_params->conn))
@@ -177,7 +184,6 @@ void future_write_cb(const int sock, short int which, void *arg)
 
         hs->response.headers_sent = true;
         fw->len = hs->response.content_lenght;
-        // free(headers);
     }
     else if (hs->response.headers_sent == false && hs->response.content_lenght == -1)
     {
@@ -227,6 +233,7 @@ void future_write_cb(const int sock, short int which, void *arg)
     if (fw->eof)
     {
         event_del(fw->fw_event);
+        event_free(fw->fw_event);
         close(fd);
         // free(fw);
     }
@@ -322,11 +329,14 @@ void flush_egress(struct http_stream *hs)
 void http3_cleanup(struct app_context *app_ctx)
 {
     struct http_stream *hs, *tmp;
+    int c = 0;
+
     HASH_ITER(hh, app_ctx->conns->http_streams, hs, tmp)
     {
-        HASH_DELETE(hh, app_ctx->conns->http_streams, hs);
+        log_debug("Going thru loop connection count %d", c++);
+        // HASH_DELETE(hh, app_ctx->conns->http_streams, hs);
+        delete_connection(&app_ctx->conns->http_streams, hs);
         http3_connection_cleanup(hs);
-        mp_delete(&hs->mp, true);
     }
 
     close(app_ctx->conns->sock);
@@ -339,24 +349,38 @@ void http3_connection_cleanup(struct http_stream *hs)
 {
     struct http3_params *http3_params = hs->http3_params;
 
-    evtimer_del(hs->timeout_ev);
-    event_free(hs->timeout_ev);
+    log_debug("==> H3 Cleanup %u", hs->cid[1]);
+
+    if (hs->timeout_ev)
+    {
+        evtimer_del(hs->timeout_ev);
+        event_free(hs->timeout_ev);
+        hs->timeout_ev = NULL;
+    }
 
     if (http3_params->http3)
     {
         quiche_h3_conn_free(http3_params->http3);
+        http3_params->http3 = NULL;
     }
-    quiche_conn_free(http3_params->conn);
-    // free(http3_params);
 
-    free(hs->request.authority);
-    free(hs->request.method);
-    free(hs->request.url);
-    free(hs->request.scheme);
+    if (http3_params->conn)
+    {
+        quiche_conn_free(http3_params->conn);
+        http3_params->conn = NULL;
+    }
+
+    if (hs->request.method)
+    {
+        free(hs->request.authority);
+        free(hs->request.method);
+        free(hs->request.url);
+        free(hs->request.scheme);
+    }
+
     delete_header_all(&hs->request.headers);
     // delete_header_all(hs->response.headers);
 
     log_debug("Freed the hell out of it.");
     mp_delete(&hs->mp, true);
-    // free(hs);
 }

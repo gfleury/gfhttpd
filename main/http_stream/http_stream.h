@@ -79,4 +79,10 @@ struct connections
     int sock;
     struct http_stream *http_streams;
 };
+
+void add_connection(struct http_stream **pconnections, mem_pool mp, struct http_stream *hs);
+struct http_stream *get_connection(struct http_stream **pconnections, uint8_t *cid);
+void delete_connection(struct http_stream **pconnections, struct http_stream *hs);
+void delete_connections_all(struct http_stream **pconnections);
+unsigned int length_connection(struct http_stream **pconnections);
 #endif

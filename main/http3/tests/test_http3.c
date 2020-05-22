@@ -19,11 +19,20 @@
         exit(EXIT_FAILURE);      \
     } while (0)
 
-void *http3_client_thread(void *arg);
+struct event *http3_client(struct event_base *loop, int sock);
 
 int test_event_cb()
 {
     struct app_context app_ctx;
+
+    struct config config = {
+        .routes = NULL,
+        .mp = NULL,
+        .cert_file = "cert/example-com.cert.pem",
+        .key_file = "cert/example-com.key.pem",
+    };
+
+    app_ctx.config = &config;
 
     if (http3_init_config(app_ctx.config) < 0)
     {
@@ -31,11 +40,11 @@ int test_event_cb()
         return 1;
     }
 
-    int fds[2], ret = 0;
-    if ((ret = socketpair(AF_UNIX, SOCK_DGRAM, 0, fds)) != 0)
+    int fds[2];
+    if (socketpair(AF_UNIX, SOCK_DGRAM, 0, fds) != 0)
     {
         perror("cannot create socket pair");
-        return ret;
+        return -1;
     }
     if (fcntl(fds[0], F_SETFL, O_NONBLOCK) != 0)
     {
@@ -48,20 +57,17 @@ int test_event_cb()
         return -1;
     }
 
-    pthread_t thread_id;
-    int s = pthread_create(&thread_id, NULL, &http3_client_thread, &fds[1]);
-    if (s != 0)
-        handle_error_en(s, "pthread_create");
+    app_ctx.evbase = event_base_new();
 
-    struct event_base *loop = event_base_new();
-    app_ctx.evbase = loop;
-    struct connections *c = calloc(1, sizeof(struct connections));
-    c->sock = fds[0];
-    c->http_streams = NULL;
+    // HTTP3 client event loop
+    struct event *http_client = http3_client(app_ctx.evbase, fds[1]);
+    assert(http_client != NULL);
 
-    app_ctx.conns = c;
+    app_ctx.conns = calloc(1, sizeof(struct connections));
+    app_ctx.conns->sock = fds[0];
+    app_ctx.conns->http_streams = NULL;
 
-    struct event *watcher = event_new(loop, fds[0], EV_READ | EV_PERSIST, http3_event_cb, &app_ctx);
+    struct event *watcher = event_new(app_ctx.evbase, fds[0], EV_READ | EV_PERSIST, http3_event_cb, &app_ctx);
     assert(watcher != NULL);
 
     if (event_add(watcher, NULL) < 0)
@@ -70,12 +76,18 @@ int test_event_cb()
         return 1;
     }
 
-    sleep(1);
-
-    ret = event_base_loop(loop, 0);
+    assert(event_base_loop(app_ctx.evbase, 0) == 0);
 
     close(fds[0]);
     close(fds[1]);
+
+    event_free(http_client);
+    event_free(watcher);
+
+    event_base_free(app_ctx.evbase);
+
+    http3_cleanup(&app_ctx);
+
     return (EXIT_SUCCESS);
 }
 

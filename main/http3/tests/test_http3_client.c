@@ -58,6 +58,12 @@ struct conn_io
     quiche_h3_conn *http3;
 
     struct event_base *loop;
+
+    quiche_config *config;
+
+    SSL_CTX *ctx;
+
+    SSL *ssl;
 };
 
 static int client_write(struct conn_io *conn_io)
@@ -169,7 +175,17 @@ static void client_recv_cb(const int sock, short int which, void *arg)
     {
         fprintf(stderr, "Client: connection closed\n");
 
+        quiche_h3_conn_free(conn_io->http3);
+        quiche_conn_free(conn_io->conn);
+        quiche_config_free(conn_io->config);
+        // SSL_free(conn_io->ssl);
+        SSL_CTX_free(conn_io->ctx);
+
+        event_del(conn_io->timer);
+        event_free(conn_io->timer);
+
         event_base_loopbreak(conn_io->loop);
+        free(conn_io);
         return;
     }
 
@@ -190,11 +206,14 @@ static void client_recv_cb(const int sock, short int which, void *arg)
             return;
         }
 
-        conn_io->http3 = quiche_h3_conn_new_with_transport(conn_io->conn, config);
         if (conn_io->http3 == NULL)
         {
-            fprintf(stderr, "Client: failed to create HTTP/3 connection\n");
-            return;
+            conn_io->http3 = quiche_h3_conn_new_with_transport(conn_io->conn, config);
+            if (conn_io->http3 == NULL)
+            {
+                fprintf(stderr, "Client: failed to create HTTP/3 connection\n");
+                return;
+            }
         }
 
         quiche_h3_config_free(config);
@@ -327,43 +346,62 @@ static void client_timeout_cb(const int sock, short int which, void *arg)
         fprintf(stderr, "Client: connection closed, recv=%zu sent=%zu lost=%zu rtt=%" PRIu64 "ns\n",
                 stats.recv, stats.sent, stats.lost, stats.rtt);
 
+        quiche_h3_conn_free(conn_io->http3);
+        quiche_conn_free(conn_io->conn);
+        quiche_config_free(conn_io->config);
+        // SSL_free(conn_io->ssl);
+        SSL_CTX_free(conn_io->ctx);
+
+        event_del(conn_io->timer);
+        event_free(conn_io->timer);
+
         event_base_loopbreak(conn_io->loop);
+        free(conn_io);
         return;
     }
 }
 
-int http3_client(int sock)
+struct event *http3_client(struct event_base *loop, int sock)
 {
     if (fcntl(sock, F_SETFL, O_NONBLOCK) != 0)
     {
         perror("failed to make socket non-blocking");
-        return -1;
+        return NULL;
     }
 
-    quiche_config *config = quiche_config_new(QUICHE_PROTOCOL_VERSION);
-    if (config == NULL)
+    struct conn_io *conn_io = calloc(1, sizeof(*conn_io));
+    if (conn_io == NULL)
+    {
+        fprintf(stderr, "Client: failed to allocate connection IO\n");
+        return NULL;
+    }
+    conn_io->http3 = NULL;
+
+    conn_io->config = quiche_config_new(QUICHE_PROTOCOL_VERSION);
+
+    if (conn_io->config == NULL)
     {
         fprintf(stderr, "Client: failed to create config\n");
-        return -1;
+        return NULL;
     }
 
-    quiche_config_set_application_protos(config,
+    quiche_config_set_application_protos(conn_io->config,
                                          (uint8_t *)QUICHE_H3_APPLICATION_PROTOCOL,
                                          sizeof(QUICHE_H3_APPLICATION_PROTOCOL) - 1);
 
-    quiche_config_set_max_idle_timeout(config, 5000);
-    quiche_config_set_max_packet_size(config, MAX_DATAGRAM_SIZE);
-    quiche_config_set_initial_max_data(config, 10485760);
-    quiche_config_set_initial_max_stream_data_bidi_local(config, 1048576);
-    quiche_config_set_initial_max_stream_data_bidi_remote(config, 1048576);
-    quiche_config_set_initial_max_stream_data_uni(config, 1048576);
-    quiche_config_set_initial_max_streams_bidi(config, 128);
-    quiche_config_set_initial_max_streams_uni(config, 3);
-    quiche_config_set_disable_active_migration(config, true);
+    quiche_config_set_max_idle_timeout(conn_io->config, 10000);
+    quiche_config_set_max_packet_size(conn_io->config, MAX_DATAGRAM_SIZE);
+    quiche_config_set_initial_max_data(conn_io->config, 10485760);
+    quiche_config_set_initial_max_stream_data_bidi_local(conn_io->config, 1048576);
+    quiche_config_set_initial_max_stream_data_bidi_remote(conn_io->config, 1048576);
+    quiche_config_set_initial_max_stream_data_uni(conn_io->config, 1048576);
+    quiche_config_set_initial_max_streams_bidi(conn_io->config, 128);
+    quiche_config_set_initial_max_streams_uni(conn_io->config, 3);
+    quiche_config_set_disable_active_migration(conn_io->config, true);
 
     if (getenv("SSLKEYLOGFILE"))
     {
-        quiche_config_log_keys(config);
+        quiche_config_log_keys(conn_io->config);
     }
 
     // ABC: old config creation here
@@ -373,43 +411,35 @@ int http3_client(int sock)
     if (rng < 0)
     {
         perror("Client: failed to open /dev/urandom");
-        return -1;
+        return NULL;
     }
 
     ssize_t rand_len = read(rng, &scid, sizeof(scid));
     if (rand_len < 0)
     {
         perror("Client: failed to create connection ID");
-        return -1;
+        return NULL;
     }
+
     // quiche_conn *conn = quiche_connect("blog.cloudflare.com", (const uint8_t *)scid, sizeof(scid), config);
-    SSL_CTX *ctx = SSL_CTX_new(TLS_method());
-    SSL_CTX_set_alpn_protos(ctx, (uint8_t *)QUICHE_H3_APPLICATION_PROTOCOL,
+    conn_io->ctx = SSL_CTX_new(TLS_method());
+    SSL_CTX_set_alpn_protos(conn_io->ctx, (uint8_t *)QUICHE_H3_APPLICATION_PROTOCOL,
                             sizeof(QUICHE_H3_APPLICATION_PROTOCOL) - 1);
-    SSL *ssl = SSL_new(ctx);
-    SSL_set_connect_state(ssl);
+    conn_io->ssl = SSL_new(conn_io->ctx);
+    SSL_set_connect_state(conn_io->ssl);
 
-    SSL_set_tlsext_host_name(ssl, "0.0.0.0");
+    SSL_set_tlsext_host_name(conn_io->ssl, "localhost");
 
-    quiche_conn *conn = quiche_conn_new_with_tls((const uint8_t *)scid, sizeof(scid), NULL, 0, config, ssl, false);
+    quiche_conn *conn = quiche_conn_new_with_tls((const uint8_t *)scid, sizeof(scid), NULL, 0, conn_io->config, conn_io->ssl, false);
 
     if (conn == NULL)
     {
         fprintf(stderr, "Client: failed to create connection\n");
-        return -1;
-    }
-
-    struct conn_io *conn_io = calloc(1, sizeof(*conn_io));
-    if (conn_io == NULL)
-    {
-        fprintf(stderr, "Client: failed to allocate connection IO\n");
-        return -1;
+        return NULL;
     }
 
     conn_io->sock = sock;
     conn_io->conn = conn;
-
-    struct event_base *loop = event_base_new();
 
     struct event *watcher = event_new(loop, sock, EV_READ | EV_PERSIST, client_recv_cb, conn_io);
     assert(watcher != NULL);
@@ -419,34 +449,12 @@ int http3_client(int sock)
     if (event_add(watcher, NULL) < 0)
     {
         fprintf(stderr, "Client: Could not create/add a watcher event!\n");
-        return 1;
+        return NULL;
     }
 
     conn_io->timer = evtimer_new(loop, client_timeout_cb, conn_io);
     event_add(conn_io->timer, 0);
     event_active(conn_io->timer, 0, 0);
 
-    int ret = event_base_loop(loop, 0);
-    assert(ret == 0);
-
-    event_free(watcher);
-    event_base_free(loop);
-
-    if (conn_io->http3)
-    {
-        quiche_h3_conn_free(conn_io->http3);
-    }
-
-    quiche_conn_free(conn);
-
-    quiche_config_free(config);
-
-    return 0;
-}
-
-void *http3_client_thread(void *arg)
-{
-    int sock = *(int *)arg;
-    http3_client(sock);
-    return (NULL);
+    return watcher;
 }

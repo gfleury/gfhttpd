@@ -31,10 +31,13 @@ void timeout_cb(const int sock, short int which, void *arg)
         log_debug("connection closed, recv=%zu sent=%zu lost=%zu rtt=%" PRIu64 "ns cwnd=%zu",
                   stats.recv, stats.sent, stats.lost, stats.rtt, stats.cwnd);
 
-        struct http_stream *head = hs->head;
-
-        HASH_DELETE(hh, head, hs);
-        http3_connection_cleanup(hs);
+        /* 
+         * Clean-up timeout event, 
+         * connection free/removal will happen on event_cb on next 'read' event
+         */
+        evtimer_del(hs->timeout_ev);
+        event_free(hs->timeout_ev);
+        hs->timeout_ev = NULL;
 
         return;
     }
