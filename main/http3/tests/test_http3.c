@@ -28,9 +28,9 @@ int test_event_cb()
     struct config config = {
         .routes = NULL,
         .mp = NULL,
-        .cert_file = "cert/example-com.cert.pem",
-        .key_file = "cert/example-com.key.pem",
     };
+    snprintf(config.cert_file, sizeof(config.cert_file), "cert/example-com.cert.pem");
+    snprintf(config.key_file, sizeof(config.key_file), "cert/example-com.key.pem");
 
     app_ctx.config = &config;
 

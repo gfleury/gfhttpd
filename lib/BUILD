@@ -46,11 +46,15 @@ configure_make(
     # see #315
     configure_env_vars = {
         "AR": "",
+        "OPENSSL_INCS": "-I./external/boringssl/src/include",
+        # Small hack to prevent looking for system packages
+        "PKG_CONFIG": "/bin/ls",
     },
     configure_options = [
         "--enable-shared=no",
         "--disable-libevent-regress",
         "--enable-openssl=yes",
+        # "--disable-samples",
     ],
     lib_source = "@libevent//:all",
     out_lib_dir = "lib",
@@ -82,8 +86,8 @@ configure_make(
     configure_env_vars = {
         "AR": "",
         "CXXFLAGS": "-std=c++14",
-        # "OPENSSL_CFLAGS": "-Iexternal/openssl/",
-        # "OPENSSL_LIBS": "-lcrypto -lssl",
+        "OPENSSL_CFLAGS": "-I./external/boringssl/src/include",
+        "OPENSSL_LIBS": "-lcrypto -lssl",
         # "LIBEVENT_OPENSSL_CFLAGS": "-Iexternal/libevent",
         # "LIBEVENT_OPENSSL_LIBS": "-levent -levent_openssl",
     },
