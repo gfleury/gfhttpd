@@ -47,6 +47,7 @@ configure_make(
     configure_env_vars = {
         "AR": "",
         "OPENSSL_INCS": "-I./external/boringssl/src/include",
+        "OPENSSL_LIBS": "-lcrypto -lssl",
         # Small hack to prevent looking for system packages
         "PKG_CONFIG": "/bin/ls",
     },
