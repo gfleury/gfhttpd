@@ -45,19 +45,18 @@ configure_make(
     # the build script has problems with passing output file to libtool)
     # see #315
     configure_env_vars =
-        # Small hack to prevent looking for system packages
+        # Small hack to prevent looking for system packages, but it's not working well on linux due some libevent build hack
         select({
             "@bazel_tools//src/conditions:darwin": {
                 "AR": "",
-                "OPENSSL_INCS": "-I./external/boringssl/src/include",
-                "OPENSSL_LIBS": "-lcrypto -lssl",
+                "OPENSSL_INCS": "-I$EXT_BUILD_ROOT/external/boringssl/src/include/",
+                "OPENSSL_LIBADD": "-L$EXT_BUILD_ROOT/external/boringssl/",
                 "PKG_CONFIG": "/bin/ls",
             },
             "//conditions:default": {
                 "AR": "",
-                "OPENSSL_INCS": "-I./external/boringssl/src/include",
-                "OPENSSL_LIBS": "-lcrypto -lssl",
-                "PKG_CONFIG": "",
+                "OPENSSL_INCS": "-I$EXT_BUILD_ROOT/external/boringssl/src/include/",
+                "OPENSSL_LIBADD": "-L$EXT_BUILD_ROOT/bazel-out/k8-fastbuild/bin/external/boringssl",
             },
         }),
     configure_options = [
