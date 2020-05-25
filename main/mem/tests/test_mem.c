@@ -59,8 +59,7 @@ int simple_allocations()
     return (EXIT_SUCCESS);
 }
 
-#define LOOP 256
-int loop_allocation()
+int loop_allocation(int LOOP)
 {
     mem_pool mp = mp_new(MSIZE * 256);
     assert(mp);
@@ -79,7 +78,7 @@ int loop_allocation()
 
     assert(mp_has_left(mp) == align_size(MSIZE * 256) - (LOOP * sizeof(test)));
 
-    mp_free(mp);
+    // mp_free(mp);
 
     for (int c = 0; c < LOOP; c++)
     {
@@ -89,13 +88,15 @@ int loop_allocation()
         assert(t->c == 0);
     }
 
+    mp_print_info(mp);
+
     mp_delete(&mp, true);
     assert(mp == NULL);
 
     return (EXIT_SUCCESS);
 }
 
-int under_allocate()
+int under_allocate(int LOOP)
 {
     mem_pool mp = mp_new(17);
     assert(mp);
@@ -106,7 +107,7 @@ int under_allocate()
 
     for (int c = 0; c < LOOP; c++)
     {
-        t = mp_alloc(mp, sizeof(test));
+        t = mp_alloc(mp, sizeof(test) + c);
         assert(t);
         memset(t, c, sizeof(test));
         assert(t->c == (char)c);
@@ -130,5 +131,16 @@ int under_allocate()
 
 int main()
 {
-    return simple_allocations() + loop_allocation() + under_allocate();
+    return simple_allocations() +
+           loop_allocation(1) +
+           loop_allocation(128) +
+           loop_allocation(256) +
+           loop_allocation(512) +
+           loop_allocation(64) +
+           loop_allocation(32) +
+           loop_allocation(16) +
+           loop_allocation(8) +
+           loop_allocation(1024) +
+           loop_allocation(2048) +
+           under_allocate(256);
 }
