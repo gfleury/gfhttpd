@@ -178,13 +178,15 @@ static void client_recv_cb(const int sock, short int which, void *arg)
         quiche_h3_conn_free(conn_io->http3);
         quiche_conn_free(conn_io->conn);
         quiche_config_free(conn_io->config);
+        SSL_shutdown(conn_io->ssl);
         // SSL_free(conn_io->ssl);
         SSL_CTX_free(conn_io->ctx);
 
         event_del(conn_io->timer);
         event_free(conn_io->timer);
 
-        event_base_loopbreak(conn_io->loop);
+        struct timeval sec = {.tv_sec = 1, .tv_usec = 0};
+        event_base_loopexit(conn_io->loop, &sec);
         free(conn_io);
         return;
     }
@@ -360,7 +362,8 @@ static void client_timeout_cb(const int sock, short int which, void *arg)
             fprintf(stderr, "Sleeping 1 second while wait for conenctions from %d to zero....\n", length_connection());
             sleep(1);
         }
-        event_base_loopbreak(conn_io->loop);
+        struct timeval sec = {.tv_sec = 1, .tv_usec = 0};
+        event_base_loopexit(conn_io->loop, &sec);
         free(conn_io);
         return;
     }

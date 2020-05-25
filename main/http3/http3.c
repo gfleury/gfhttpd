@@ -232,10 +232,9 @@ void future_write_cb(const int sock, short int which, void *arg)
 
     if (fw->eof)
     {
-        event_del(fw->fw_event);
-        event_free(fw->fw_event);
+        log_debug("Cleaning fw->fw_event");
+        evtimer_del(fw->fw_event);
         close(fd);
-        // free(fw);
     }
 
     return;
@@ -273,7 +272,10 @@ int send_response(struct http_stream *hs, int64_t stream_id, int fd)
     fw->len = -1;
     fw->eof = false;
 
-    fw->fw_event = evtimer_new(hs->evbase, future_write_cb, fw);
+    fw->fw_event = mp_calloc(hs->mp, 1, event_get_struct_event_size());
+    assert(fw->fw_event);
+
+    evtimer_assign(fw->fw_event, hs->evbase, future_write_cb, fw);
     struct timeval half_sec = {0, 1000};
     event_add(fw->fw_event, &half_sec);
     event_active(fw->fw_event, 0, 0);
@@ -368,6 +370,6 @@ void http3_connection_cleanup(struct http_stream *hs)
     delete_header_all(&hs->request.headers);
     // delete_header_all(hs->response.headers);
 
-    log_debug("Freed the hell out of it.");
+    log_debug("Freed the hell out of it!");
     mp_delete(&hs->mp, true);
 }

@@ -80,7 +80,10 @@ int test_event_cb()
     close(fds[0]);
     close(fds[1]);
 
+    event_del(http_client);
     event_free(http_client);
+
+    event_del(watcher);
     event_free(watcher);
 
     event_base_free(app_ctx.evbase);
