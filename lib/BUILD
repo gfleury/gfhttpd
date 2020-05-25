@@ -44,13 +44,22 @@ configure_make(
     # (otherwise, if the libtool from bazel's toolchain is supplied,
     # the build script has problems with passing output file to libtool)
     # see #315
-    configure_env_vars = {
-        "AR": "",
-        "OPENSSL_INCS": "-I./external/boringssl/src/include",
-        "OPENSSL_LIBS": "-lcrypto -lssl",
+    configure_env_vars =
         # Small hack to prevent looking for system packages
-        "PKG_CONFIG": "/bin/ls",
-    },
+        select({
+            "@bazel_tools//src/conditions:darwin": {
+                "AR": "",
+                "OPENSSL_INCS": "-I./external/boringssl/src/include",
+                "OPENSSL_LIBS": "-lcrypto -lssl",
+                "PKG_CONFIG": "/bin/ls",
+            },
+            "//conditions:default": {
+                "AR": "",
+                "OPENSSL_INCS": "-I./external/boringssl/src/include",
+                "OPENSSL_LIBS": "-lcrypto -lssl",
+                "PKG_CONFIG": "",
+            },
+        }),
     configure_options = [
         "--enable-shared=no",
         "--disable-libevent-regress",
