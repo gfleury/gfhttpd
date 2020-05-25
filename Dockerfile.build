@@ -1,2 +1,2 @@
 FROM l.gcr.io/google/bazel:latest
-RUN apt-get update && apt-get install build-essential libssl-dev pkg-config valgrind -y
+RUN apt-get update && apt-get install build-essential valgrind -y

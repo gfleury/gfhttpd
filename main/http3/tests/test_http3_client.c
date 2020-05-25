@@ -355,6 +355,11 @@ static void client_timeout_cb(const int sock, short int which, void *arg)
         event_del(conn_io->timer);
         event_free(conn_io->timer);
 
+        while (length_connection() != 0)
+        {
+            fprintf(stderr, "Sleeping 1 second while wait for conenctions from %d to zero....\n", length_connection());
+            sleep(1);
+        }
         event_base_loopbreak(conn_io->loop);
         free(conn_io);
         return;
