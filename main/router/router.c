@@ -4,6 +4,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <assert.h>
+
 #include "config/routes.h"
 
 #include "http_stream/http_stream.h"
@@ -99,8 +101,10 @@ int error_fd(struct http_stream *hs, char *http_status)
     return pipefd[0];
 }
 
-int root_router(struct event_base *loop, struct http_stream *hs)
+int root_router(struct event_base *loop, struct route *routes, struct http_stream *hs)
 {
+    assert(loop);
+    assert(hs);
     int fd;
     struct route *route;
     char *rel_path, *request_path = hs->request.url;
@@ -112,10 +116,10 @@ int root_router(struct event_base *loop, struct http_stream *hs)
     rel_path = request_path;
 
     // Try get specific route
-    if (get_route(&hs->routes, rel_path, &rm) == -1)
+    if (get_route(&routes, rel_path, &rm) == -1)
     {
         // Try to get route by regex
-        match_route(&hs->routes, rel_path, &rm);
+        match_route(&routes, rel_path, &rm);
     }
 
     route = rm.route;
@@ -136,10 +140,10 @@ int root_router(struct event_base *loop, struct http_stream *hs)
 
         hs->request.modules_url = rm.stripped_path;
 
-        struct event *module_event = evtimer_new(loop, module_cb, hs);
+        hs->module_cb_ev = evtimer_new(loop, module_cb, hs);
         struct timeval half_sec = {0, 2000};
 
-        if ((ret = evtimer_add(module_event, &half_sec)) < 0)
+        if ((ret = evtimer_add(hs->module_cb_ev, &half_sec)) < 0)
         {
             log_error("Could not add a module_event event");
             return ret;

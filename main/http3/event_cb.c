@@ -317,6 +317,7 @@ void http3_event_cb(const int sock, short int which, void *arg)
                 log_error("Failed to create connection!");
                 return;
             }
+
             // TODO: move all ev timers to hs structure and remove evbase dependency
             hs->evbase = app_ctx->evbase;
             hs->timeout_ev = evtimer_new(app_ctx->evbase, timeout_cb, hs);
@@ -394,7 +395,7 @@ void http3_event_cb(const int sock, short int which, void *arg)
 
                     hs->response.content_lenght = -1;
 
-                    int fd = root_router(hs->evbase, hs);
+                    int fd = root_router(hs->evbase, app_ctx->config->routes, hs);
                     if (fd == -1)
                     {
                         log_error("%s %s We are fucked, unable to root_router.", hs->request.method, hs->request.url);

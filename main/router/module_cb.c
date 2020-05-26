@@ -31,10 +31,12 @@ void module_cb(int fd, short event, void *arg)
         return;
     }
 
+    event_del(hs->module_cb_ev);
     event_free(hs->module_cb_ev);
     // Check if writing was already done.
     if (hs->request.modules_chain->next != NULL)
     {
+
         hs->request.modules_chain = hs->request.modules_chain->next;
         hs->module_cb_ev = evtimer_new(hs->evbase, module_cb, hs);
         struct timeval half_sec = {0, 2000};

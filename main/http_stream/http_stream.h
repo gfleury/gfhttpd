@@ -51,7 +51,6 @@ struct http_stream
 
     struct event *timeout_ev, *module_cb_ev;
     struct timeval timer;
-    struct route *routes;
 
     mem_pool mp;
 
