@@ -342,6 +342,13 @@ void http3_cleanup(struct app_context *app_ctx)
 
     close(app_ctx->conns->sock);
     free(app_ctx->conns);
+
+    if (app_ctx->evaccept_http3)
+    {
+        event_del(app_ctx->evaccept_http3);
+        event_free(app_ctx->evaccept_http3);
+    }
+
     quiche_h3_config_free(http3_config);
     quiche_config_free(pquiche_config);
 }

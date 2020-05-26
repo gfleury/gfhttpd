@@ -44,6 +44,8 @@ static void initialize_app_context(app_context *app_ctx, SSL_CTX *ssl_ctx,
   app_ctx->ssl_ctx = ssl_ctx;
   app_ctx->evbase = evbase;
   app_ctx->config = config;
+  app_ctx->evaccept_http3 = NULL;
+  app_ctx->evaccept_http2 = NULL;
 }
 
 /* Here's a callback function that calls loopbreak */
@@ -89,6 +91,10 @@ static void run(struct config *config)
 
   event_base_loop(evbase, EVLOOP_NO_EXIT_ON_EMPTY);
 
+  event_del(watchdog_event);
+  event_free(watchdog_event);
+
+  http2_cleanup(&app_ctx);
   http3_cleanup(&app_ctx);
 
   destroy_log(&plog);
@@ -163,5 +169,8 @@ int main(int argc, char **argv)
   SSL_library_init();
 
   run(&config);
+
+  config_free(&config);
+
   return (EXIT_SUCCESS);
 }

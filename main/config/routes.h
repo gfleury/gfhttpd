@@ -37,7 +37,7 @@ void delete_routes_all(struct route **routes);
 void delete_route(struct route **routes, struct route *r);
 void add_route(struct route **routes, mem_pool mp, struct route *r);
 struct route *insert_route(struct route **routes, mem_pool mp, char *path, int n_path, struct modules_chain *m, bool regex);
-struct route *create_route(struct route **routes, char *path, int n_path, struct modules_chain *m, bool regex);
+struct route *create_route(struct route **routes, mem_pool mp, char *path, int n_path, struct modules_chain *m, bool regex);
 int get_route(struct route **routes, char *path, struct route_match *rm);
 int match_route(struct route **routes, char *subject, struct route_match *rm);
 #endif

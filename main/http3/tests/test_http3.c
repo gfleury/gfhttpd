@@ -23,7 +23,10 @@ struct event *http3_client(struct event_base *loop, int sock);
 
 int test_event_cb()
 {
-    struct app_context app_ctx;
+    struct app_context app_ctx = {
+        .evaccept_http3 = NULL,
+        .evaccept_http2 = NULL,
+    };
 
     struct config config = {
         .routes = NULL,

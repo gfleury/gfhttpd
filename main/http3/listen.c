@@ -57,15 +57,15 @@ int http3_start_listen(struct event_base *evbase, const char *service,
   int ret = evutil_make_socket_nonblocking(sock);
   assert(ret >= 0);
 
-  struct event *accept_event = event_new(evbase, sock, EV_READ | EV_PERSIST, http3_event_cb, app_ctx);
-  assert(accept_event != NULL);
+  app_ctx->evaccept_http3 = event_new(evbase, sock, EV_READ | EV_PERSIST, http3_event_cb, app_ctx);
+  assert(app_ctx->evaccept_http3 != NULL);
 
-  if (event_add(accept_event, NULL) < 0)
+  if (event_add(app_ctx->evaccept_http3, NULL) < 0)
   {
     log_error("Could not create/add a accept event!");
     return 1;
   }
-  else if (!accept_event)
+  else if (!app_ctx->evaccept_http3)
   {
     log_error("Could not start listener");
     return 1;

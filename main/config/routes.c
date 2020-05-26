@@ -131,7 +131,7 @@ struct route *insert_route(struct route **routes, mem_pool mp, char *path, int n
 {
     struct route *r = NULL;
 
-    r = (struct route *)calloc(1, sizeof *r);
+    r = (struct route *)mp_calloc(mp, 1, sizeof *r);
     r->path = path;
     r->n_path = n_path;
     r->modules_chain = m;
@@ -149,11 +149,11 @@ struct route *insert_route(struct route **routes, mem_pool mp, char *path, int n
     return r;
 }
 
-struct route *create_route(struct route **routes, char *path, int n_path, struct modules_chain *m, bool regex)
+struct route *create_route(struct route **routes, mem_pool mp, char *path, int n_path, struct modules_chain *m, bool regex)
 {
     struct route *r = NULL;
 
-    r = (struct route *)calloc(1, sizeof *r);
+    r = (struct route *)mp_calloc(mp, 1, sizeof *r);
     r->path = path;
     if (regex)
     {
@@ -192,7 +192,6 @@ int get_route(struct route **routes, char *path, struct route_match *rm)
 void delete_route(struct route **routes, struct route *r)
 {
     HASH_DEL(*routes, r);
-    free(r);
 }
 
 void delete_routes_all(struct route **routes)
@@ -219,7 +218,6 @@ void delete_routes_all(struct route **routes)
 
         pcre2_code_free(current->re);
         free(current->path);
-        free(current);
     }
 }
 

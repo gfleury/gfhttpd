@@ -17,6 +17,8 @@ typedef struct app_context
 {
     SSL_CTX *ssl_ctx;
     struct event_base *evbase;
+    struct event *evaccept_http3;
+    struct evconnlistener *evaccept_http2;
     struct connections *conns;
     struct config *config;
 } app_context;

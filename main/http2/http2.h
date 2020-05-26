@@ -26,3 +26,5 @@ void http2_eventcb(struct bufferevent *bev, short events, void *ptr);
 
 int http2_start_listen(struct event_base *evbase, const char *service,
                        app_context *app_ctx);
+
+void http2_cleanup(app_context *app_ctx);

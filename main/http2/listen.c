@@ -46,16 +46,20 @@ int http2_start_listen(struct event_base *evbase, const char *service,
     sin6.sin6_port = htons(atoi(service));
     sin6.sin6_addr = in6addr_any;
 
-    struct evconnlistener *listener;
-    listener = evconnlistener_new_bind(
+    app_ctx->evaccept_http2 = evconnlistener_new_bind(
         evbase, http2_acceptcb, app_ctx, LEV_OPT_CLOSE_ON_FREE | LEV_OPT_REUSEABLE,
         16, (struct sockaddr *)&sin6, sizeof(sin6));
 
-    if (!listener)
+    if (!app_ctx->evaccept_http2)
     {
         log_error("Could not start listener");
         return 1;
     }
 
     return 0;
+}
+
+void http2_cleanup(app_context *app_ctx)
+{
+    evconnlistener_free(app_ctx->evaccept_http2);
 }
