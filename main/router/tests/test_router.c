@@ -102,7 +102,7 @@ int test_router_module_path()
 
     while ((ret = read(fd, &buf, sizeof(buf))) > 0)
     {
-        assert(strnstr(buf, "Current Time in String:", ret) != NULL);
+        assert(memcmp(buf, "Current Time in String:", 16) == 0);
     }
 
     event_base_free(evbase);
