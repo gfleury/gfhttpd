@@ -144,3 +144,11 @@ void mp_fake_free(void *ptr)
 {
     return;
 }
+
+char *mp_strndup(mem_pool mp, const char *s1, size_t n)
+{
+    char *ret = (char *)mp_calloc(mp, n + 1, sizeof(char));
+    memcpy(ret, s1, n);
+    ret[n] = '\0';
+    return ret;
+}

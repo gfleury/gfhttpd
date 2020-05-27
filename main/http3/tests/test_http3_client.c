@@ -187,6 +187,7 @@ static void client_recv_cb(const int sock, short int which, void *arg)
 
         struct timeval sec = {.tv_sec = 1, .tv_usec = 0};
         event_base_loopexit(conn_io->loop, &sec);
+        close(conn_io->sock);
         free(conn_io);
         return;
     }
@@ -364,6 +365,7 @@ static void client_timeout_cb(const int sock, short int which, void *arg)
         }
         struct timeval sec = {.tv_sec = 1, .tv_usec = 0};
         event_base_loopexit(conn_io->loop, &sec);
+        close(conn_io->sock);
         free(conn_io);
         return;
     }

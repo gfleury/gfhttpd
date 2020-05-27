@@ -13,5 +13,6 @@ extern void mp_print_info(mem_pool mp);
 extern size_t mp_has_left(mem_pool mp);
 extern size_t align_size(size_t s);
 extern void mp_fake_free(void *ptr);
+extern char *mp_strndup(mem_pool mp, const char *s1, size_t n);
 #undef mem_pool
 #endif

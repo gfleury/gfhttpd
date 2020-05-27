@@ -155,7 +155,7 @@ int test_routes()
         NULL,
     };
 
-    struct route *r = insert_route(&routes, mp, strdup("/first_level"), strlen("/first_level"), m_chain, false);
+    struct route *r = insert_route(&routes, mp, ("/first_level"), strlen("/first_level"), m_chain, false);
     assert(r != NULL);
 
     ret = get_route(&routes, "/first_level", &rm);
@@ -170,7 +170,7 @@ int test_routes()
     m_chain->module = m;
     m_chain->next = NULL;
 
-    struct route *r2 = insert_route(&routes, mp, strdup("^/second_level/(.*)"), strlen("^/second_level/(.*)"), m_chain, true);
+    struct route *r2 = insert_route(&routes, mp, ("^/second_level/(.*)"), strlen("^/second_level/(.*)"), m_chain, true);
     assert(r2 != NULL);
 
     // Try get specific route
@@ -201,7 +201,7 @@ int test_routes()
     m_chain->next = NULL;
 
     // ^/phpmyadmin(?:/(.*))?$
-    struct route *r3 = insert_route(&routes, mp, strdup("^/phpmyadmin(?:/(.*))?$"), strlen("^/phpmyadmin(?:/(.*))?$"), m_chain, true);
+    struct route *r3 = insert_route(&routes, mp, ("^/phpmyadmin(?:/(.*))?$"), strlen("^/phpmyadmin(?:/(.*))?$"), m_chain, true);
     assert(r3 != NULL);
 
     ret = match_route(&routes, "/phpmyadmin/whateverhappensthisshoudbetheonlyrest", &rm);
@@ -254,7 +254,7 @@ int test_routes()
     m_chain->module = m;
     m_chain->next = NULL;
 
-    struct route *r4 = insert_route(&routes, mp, strdup("^/no_slash_level(.*)"), strlen("^/no_slash_level(.*)"), m_chain, true);
+    struct route *r4 = insert_route(&routes, mp, ("^/no_slash_level(.*)"), strlen("^/no_slash_level(.*)"), m_chain, true);
     assert(r4 != NULL);
 
     ret = match_route(&routes, "/no_slash_level/here/", &rm);

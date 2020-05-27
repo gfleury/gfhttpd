@@ -304,7 +304,9 @@ static int on_request_recv(nghttp2_session *session,
         return 0;
     }
 
-    fd = root_router(session_data->app_ctx->evbase, stream_data);
+    fd = root_router(session_data->app_ctx->evbase,
+                     session_data->app_ctx->config->routes,
+                     stream_data);
     if (fd == -1)
     {
         return 0;

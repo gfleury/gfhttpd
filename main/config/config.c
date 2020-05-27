@@ -75,7 +75,8 @@ static int locations_parser(struct config *config, const char *json, int i)
                     log_debug("Location is = %.*s", loc_keys->end - loc_keys->start,
                               json + loc_keys->start);
 
-                    r.path = strndup(json + loc_keys->start, loc_keys->end - loc_keys->start);
+                    // r.path = strndup(json + loc_keys->start, loc_keys->end - loc_keys->start);
+                    r.path = (char *)json + loc_keys->start;
                     r.n_path = loc_keys->end - loc_keys->start;
                 }
                 else if (jsoneq(json, loc_keys, "modules") == 0)
@@ -117,10 +118,6 @@ static int locations_parser(struct config *config, const char *json, int i)
             if (r.modules_chain == NULL || r.n_path == 0)
             {
                 log_error("Failed to get modules or location for location %.*s", r.n_path, r.path);
-                if (r.path)
-                {
-                    free(r.path);
-                }
                 return (-1);
             }
             insert_route(&config->routes, config->mp, r.path, r.n_path, r.modules_chain, true);

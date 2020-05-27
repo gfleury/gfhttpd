@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #include "config.h"
 
 #include "routes.h"
@@ -132,7 +134,7 @@ struct route *insert_route(struct route **routes, mem_pool mp, char *path, int n
     struct route *r = NULL;
 
     r = (struct route *)mp_calloc(mp, 1, sizeof *r);
-    r->path = path;
+    r->path = mp_strndup(mp, path, n_path);
     r->n_path = n_path;
     r->modules_chain = m;
     if (!regex)
@@ -217,7 +219,6 @@ void delete_routes_all(struct route **routes)
         current->modules_chain = NULL;
 
         pcre2_code_free(current->re);
-        free(current->path);
     }
 }
 
