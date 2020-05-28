@@ -4,21 +4,18 @@
 
 typedef struct http2_session_data
 {
-    struct http_stream root;
     struct bufferevent *bev;
-    app_context *app_ctx;
     nghttp2_session *session;
-    char *client_addr;
 } http2_session_data;
 
-void delete_http_stream(struct http_stream *stream_data);
+void delete_http_stream(struct http_stream *hs);
 
-void delete_http2_session_data(http2_session_data *session_data);
+void delete_http2_session_data(struct http_stream *hs);
 
-struct http_stream *create_http_stream(http2_session_data *session_data, int32_t stream_id);
+struct http_stream *create_http_stream(int32_t stream_id);
 
-void remove_stream(http2_session_data *session_data, struct http_stream *stream_data);
+void remove_stream(http2_session_data *session_data, struct http_stream *hs);
 
-int session_recv(http2_session_data *session_data);
+int session_recv(struct http_stream *hs);
 
-int session_send(http2_session_data *session_data);
+int session_send(struct http_stream *hs);

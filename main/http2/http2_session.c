@@ -11,63 +11,60 @@
 #include <event2/bufferevent.h>
 #include <event2/bufferevent_ssl.h>
 
-static void add_stream(http2_session_data *session_data,
-                       struct http_stream *stream_data);
+static void add_stream(struct http_stream *hs);
 
-void delete_http2_session_data(http2_session_data *session_data)
+void delete_http2_session_data(struct http_stream *hs)
 {
-    struct http_stream *stream_data;
+    http2_session_data *session_data = (http2_session_data *)hs->http2_params;
+
     SSL *ssl = bufferevent_openssl_get_ssl(session_data->bev);
-    log_debug("%s disconnected\n", session_data->client_addr);
+    log_debug("disconnected");
     if (ssl)
     {
         SSL_shutdown(ssl);
     }
     bufferevent_free(session_data->bev);
     nghttp2_session_del(session_data->session);
-    for (stream_data = session_data->root.next; stream_data;)
+    for (hs = hs->next; hs;)
     {
-        struct http_stream *next = stream_data->next;
-        delete_http_stream(stream_data);
-        stream_data = next;
+        struct http_stream *next = hs->next;
+        delete_http_stream(hs);
+        hs = next;
     }
-    free(session_data->client_addr);
+    // free(session_data->client_addr);
     free(session_data);
 }
 
-void delete_http_stream(struct http_stream *stream_data)
+void delete_http_stream(struct http_stream *hs)
 {
-    if (stream_data->sock != -1)
+    if (hs->sock != -1)
     {
-        close(stream_data->sock);
+        close(hs->sock);
     }
-    free(stream_data->request.url);
-    free(stream_data);
+    free(hs->request.url);
+    free(hs);
 }
 
-struct http_stream *create_http_stream(http2_session_data *session_data, int32_t stream_id)
+struct http_stream *create_http_stream(int32_t stream_id)
 {
-    struct http_stream *stream_data;
-    stream_data = malloc(sizeof(struct http_stream));
-    memset(stream_data, 0, sizeof(struct http_stream));
-    stream_data->stream_id = stream_id;
-    stream_data->sock = -1;
-    memset(&stream_data->request, 0, sizeof(http_request));
+    struct http_stream *hs = calloc(1, sizeof(*hs));
+    hs->stream_id = stream_id;
+    hs->sock = -1;
+    memset(&hs->request, 0, sizeof(http_request));
 
-    add_stream(session_data, stream_data);
-    return stream_data;
+    add_stream(hs);
+    return hs;
 }
 
-static void add_stream(http2_session_data *session_data,
-                       struct http_stream *stream_data)
+static void add_stream(struct http_stream *hs)
 {
-    stream_data->next = session_data->root.next;
-    session_data->root.next = stream_data;
-    stream_data->prev = &session_data->root;
-    if (stream_data->next)
-    {
-        stream_data->next->prev = stream_data;
-    }
+    // hs->next = session_data->root->next;
+    // session_data->root->next = stream_data;
+    // stream_data->prev = &session_data->root;
+    // if (stream_data->next)
+    // {
+    //     stream_data->next->prev = stream_data;
+    // }
 }
 
 void remove_stream(http2_session_data *session_data,
@@ -84,8 +81,9 @@ void remove_stream(http2_session_data *session_data,
 
 /* Serialize the frame and send (or buffer) the data to
    bufferevent. */
-int session_send(http2_session_data *session_data)
+int session_send(struct http_stream *hs)
 {
+    http2_session_data *session_data = (http2_session_data *)hs->http2_params;
     int rv;
     rv = nghttp2_session_send(session_data->session);
     if (rv != 0)
@@ -100,8 +98,10 @@ int session_send(http2_session_data *session_data)
    function. Invocation of nghttp2_session_mem_recv() may make
    additional pending frames, so call session_send() at the end of the
    function. */
-int session_recv(http2_session_data *session_data)
+int session_recv(struct http_stream *hs)
 {
+    http2_session_data *session_data = (http2_session_data *)hs->http2_params;
+
     ssize_t readlen;
     struct evbuffer *input = bufferevent_get_input(session_data->bev);
     size_t datalen = evbuffer_get_length(input);
@@ -118,7 +118,7 @@ int session_recv(http2_session_data *session_data)
         warnx("%s: Fatal error: evbuffer_drain failed", __AT__);
         return -1;
     }
-    if (session_send(session_data) != 0)
+    if (session_send(hs) != 0)
     {
         return -1;
     }

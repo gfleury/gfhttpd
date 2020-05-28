@@ -61,6 +61,8 @@ struct http_stream
     void *http3_params;
 
     // HTTP2 specific
+    SSL *ssl;
+    void *http2_params;
     int32_t stream_id;
     struct http_stream *next;
     struct http_stream *prev;

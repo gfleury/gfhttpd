@@ -1,11 +1,6 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
 cc_library(
-    name = "headers",
-    hdrs = glob(["*.h"]),
-)
-
-cc_library(
     name = "http2",
     srcs = [
         "accept_cb.c",
@@ -16,6 +11,7 @@ cc_library(
         "ssl.c",
         "write_cb.c",
     ],
+    hdrs = glob(["*.h"]),
     copts = [
         "-DHAVE_FCNTL_H",
         "-Werror",
@@ -23,9 +19,11 @@ cc_library(
         "-Iexternal/uthash/src/",
     ],
     linkstatic = True,
-    visibility = ["//main:__pkg__"],
+    visibility = [
+        "//main:__pkg__",
+        "//main/http2/tests:__pkg__",
+    ],
     deps = [
-        ":headers",
         "//main/router",
         "//main/log",
         "//main/http_stream",

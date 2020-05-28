@@ -13,7 +13,9 @@
    buffering. See send_callback(). */
 void http2_writecb(struct bufferevent *bev, void *ptr)
 {
-    http2_session_data *session_data = (http2_session_data *)ptr;
+    struct http_stream *hs = (struct http_stream *)ptr;
+    http2_session_data *session_data = (http2_session_data *)hs->http2_params;
+
     if (evbuffer_get_length(bufferevent_get_output(bev)) > 0)
     {
         return;
@@ -21,12 +23,12 @@ void http2_writecb(struct bufferevent *bev, void *ptr)
     if (nghttp2_session_want_read(session_data->session) == 0 &&
         nghttp2_session_want_write(session_data->session) == 0)
     {
-        delete_http2_session_data(session_data);
+        delete_http2_session_data(hs);
         return;
     }
-    if (session_send(session_data) != 0)
+    if (session_send(hs) != 0)
     {
-        delete_http2_session_data(session_data);
+        delete_http2_session_data(hs);
         return;
     }
 }

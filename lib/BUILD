@@ -77,6 +77,7 @@ configure_make(
     visibility = [
         "//main:__pkg__",
         "//main/http2:__pkg__",
+        "//main/http2/tests:__pkg__",
         "//main/http3:__pkg__",
         "//main/http3/tests:__pkg__",
         "//main/log:__pkg__",
@@ -97,6 +98,7 @@ configure_make(
         "CXXFLAGS": "-std=c++14",
         "OPENSSL_CFLAGS": "-I./external/boringssl/src/include",
         "OPENSSL_LIBS": "-lcrypto -lssl",
+        "ENABLE_THIRD_PARTY": "true",
         # "LIBEVENT_OPENSSL_CFLAGS": "-Iexternal/libevent",
         # "LIBEVENT_OPENSSL_LIBS": "-levent -levent_openssl",
     },

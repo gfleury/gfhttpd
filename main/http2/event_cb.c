@@ -56,7 +56,9 @@ static int send_server_connection_header(http2_session_data *session_data);
 /* eventcb for bufferevent */
 void http2_eventcb(struct bufferevent *bev, short events, void *ptr)
 {
-    http2_session_data *session_data = (http2_session_data *)ptr;
+    struct http_stream *hs = (struct http_stream *)ptr;
+    http2_session_data *session_data = (http2_session_data *)hs->http2_params;
+
     if (events & BEV_EVENT_CONNECTED)
     {
         const unsigned char *alpn = NULL;
@@ -64,7 +66,7 @@ void http2_eventcb(struct bufferevent *bev, short events, void *ptr)
         SSL *ssl;
         (void)bev;
 
-        log_debug("%s connected\n", session_data->client_addr);
+        log_debug("http2 connected");
 
         ssl = bufferevent_openssl_get_ssl(session_data->bev);
 
@@ -80,17 +82,17 @@ void http2_eventcb(struct bufferevent *bev, short events, void *ptr)
 
         if (alpn == NULL || alpnlen != 2 || memcmp("h2", alpn, 2) != 0)
         {
-            log_debug("%s h2 is not negotiated\n", session_data->client_addr);
-            delete_http2_session_data(session_data);
+            log_debug("h2 is not negotiated");
+            delete_http2_session_data(hs);
             return;
         }
 
         initialize_nghttp2_session(session_data);
 
         if (send_server_connection_header(session_data) != 0 ||
-            session_send(session_data) != 0)
+            session_send(hs) != 0)
         {
-            delete_http2_session_data(session_data);
+            delete_http2_session_data(hs);
             return;
         }
 
@@ -98,17 +100,17 @@ void http2_eventcb(struct bufferevent *bev, short events, void *ptr)
     }
     if (events & BEV_EVENT_EOF)
     {
-        log_debug("%s EOF", session_data->client_addr);
+        log_debug("EOF");
     }
     else if (events & BEV_EVENT_ERROR)
     {
-        log_debug("%s network error", session_data->client_addr);
+        log_debug("network error");
     }
     else if (events & BEV_EVENT_TIMEOUT)
     {
-        log_debug("%s timeout", session_data->client_addr);
+        log_debug("timeout");
     }
-    delete_http2_session_data(session_data);
+    delete_http2_session_data(hs);
 }
 
 static void initialize_nghttp2_session(http2_session_data *session_data)
@@ -271,49 +273,49 @@ static int on_begin_headers_callback(nghttp2_session *session,
                                      const nghttp2_frame *frame,
                                      void *user_data)
 {
-    http2_session_data *session_data = (http2_session_data *)user_data;
-    struct http_stream *stream_data;
+    // http2_session_data *session_data = (http2_session_data *)user_data;
+    struct http_stream *hs;
 
     if (frame->hd.type != NGHTTP2_HEADERS ||
         frame->headers.cat != NGHTTP2_HCAT_REQUEST)
     {
         return 0;
     }
-    stream_data = create_http_stream(session_data, frame->hd.stream_id);
+    hs = create_http_stream(frame->hd.stream_id);
     nghttp2_session_set_stream_user_data(session, frame->hd.stream_id,
-                                         stream_data);
+                                         hs);
     return 0;
 }
 
 static int on_request_recv(nghttp2_session *session,
                            http2_session_data *session_data,
-                           struct http_stream *stream_data)
+                           struct http_stream *hs)
 {
     int fd;
     nghttp2_nv hdrs[] = {MAKE_NV(":status", "200")};
 
-    if (!stream_data->request.url)
+    if (!hs->request.url)
     {
         return 0;
     }
 
-    log_debug("%s %s %s\n", stream_data->request.method, session_data->client_addr,
-              stream_data->request.url);
-    if (!check_path(stream_data->request.url))
+    log_debug("%s %s", hs->request.method,
+              hs->request.url);
+    if (!check_path(hs->request.url))
     {
         return 0;
     }
 
-    fd = root_router(session_data->app_ctx->evbase,
-                     session_data->app_ctx->config->routes,
-                     stream_data);
+    fd = root_router(hs->evbase, NULL,
+                     //  session_data->app_ctx->config->routes,
+                     hs);
     if (fd == -1)
     {
         return 0;
     }
-    stream_data->sock = fd;
+    hs->sock = fd;
 
-    if (send_response(session, stream_data->stream_id, hdrs, ARRLEN(hdrs), fd) !=
+    if (send_response(session, hs->stream_id, hdrs, ARRLEN(hdrs), fd) !=
         0)
     {
         close(fd);

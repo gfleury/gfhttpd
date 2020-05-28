@@ -5,12 +5,13 @@
    checked. */
 void http2_readcb(struct bufferevent *bev, void *ptr)
 {
-    http2_session_data *session_data = (http2_session_data *)ptr;
+    struct http_stream *hs = (struct http_stream *)ptr;
+    // http2_session_data *session_data = (http2_session_data *)hs->http2_params;
     (void)bev;
 
-    if (session_recv(session_data) != 0)
+    if (session_recv(hs) != 0)
     {
-        delete_http2_session_data(session_data);
+        delete_http2_session_data(hs);
         return;
     }
 }
